@@ -9,7 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.example.entity.base.BaseEntity;
-import org.hibernate.boot.jaxb.SourceType;
+import org.example.entity.type.SourceType;
 
 import java.math.BigDecimal;
 
