@@ -12,7 +12,7 @@ public interface AutoSyncConfigRepository extends JpaRepository<AutoSyncConfig, 
       "WHERE (:indexInfoId IS NULL OR c.indexInfo.id = :indexInfoId) " +
       "AND (:enabled IS NULL OR c.enabled = :enabled) " +
       "AND (:idAfter IS NULL OR c.id > :idAfter) ")
-  List<AutoSyncConfig> findAllWithCursor(
+  List<AutoSyncConfig> findConfigsByCursor(
       Long indexInfoId,
       Boolean enabled,
       Long idAfter,

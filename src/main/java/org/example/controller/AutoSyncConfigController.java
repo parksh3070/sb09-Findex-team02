@@ -43,12 +43,12 @@ public class AutoSyncConfigController {
   }
 
   @GetMapping
-  public ResponseEntity<CursorPageResponseAutoSyncConfigDto<AutoSyncConfigDto>> findAll(
+  public ResponseEntity<CursorPageResponseAutoSyncConfigDto<AutoSyncConfigDto>> findConfigsByCursor(
       @ParameterObject AutoSyncConfigSearchRequest request
   ) {
     return ResponseEntity
         .status(HttpStatus.OK)
-        .body(autoSyncConfigService.findAll(request));
+        .body(autoSyncConfigService.findConfigsByCursor(request));
   }
 
 }

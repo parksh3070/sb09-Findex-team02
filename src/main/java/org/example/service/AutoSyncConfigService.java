@@ -41,7 +41,9 @@ public class AutoSyncConfigService {
     return autoSyncConfigMapper.toDto(autoSyncConfigRepository.findById(id).orElseThrow());
   }
 
-  public CursorPageResponseAutoSyncConfigDto<AutoSyncConfigDto> findAll(AutoSyncConfigSearchRequest request){
+  public CursorPageResponseAutoSyncConfigDto<AutoSyncConfigDto> findConfigsByCursor(AutoSyncConfigSearchRequest request){
+
+    // 대소문자 통일
     Sort.Direction direction = request.sortDirection().equalsIgnoreCase("desc")
         ? Sort.Direction.DESC : Sort.Direction.ASC;
 
@@ -49,7 +51,7 @@ public class AutoSyncConfigService {
 
     Pageable pageable = PageRequest.of(0, request.size() + 1, sort);
 
-    List<AutoSyncConfig> configs = autoSyncConfigRepository.findAllWithCursor(
+    List<AutoSyncConfig> configs = autoSyncConfigRepository.findConfigsByCursor(
         request.indexInfoId(),
         request.enabled(),
         request.idAfter(),
@@ -65,8 +67,8 @@ public class AutoSyncConfigService {
         .map(autoSyncConfigMapper::toDto)
         .toList();
 
-    Long nextIdAfter = content.isEmpty() ? null : content.get(content.size() - 1).getId();
-    String nextCursor = (nextIdAfter != null) ? String.valueOf(nextIdAfter) : null;
+    Long lastId = content.isEmpty() ? null : content.get(content.size() - 1).getId();
+    String nextCursor = (lastId != null) ? String.valueOf(lastId) : null;
 
     long totalElements = autoSyncConfigRepository.countByFilters(
         request.indexInfoId(),
@@ -76,7 +78,7 @@ public class AutoSyncConfigService {
     return new CursorPageResponseAutoSyncConfigDto<>(
         contentDtoList,
         nextCursor,
-        nextIdAfter,
+        lastId,
         contentDtoList.size(),
         totalElements,
         hasNext
