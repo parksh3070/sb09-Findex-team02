@@ -22,4 +22,6 @@ public interface AutoSyncConfigRepository extends JpaRepository<AutoSyncConfig, 
       "WHERE (:indexInfoId IS NULL OR c.indexInfo.id = :indexInfoId) " +
       "AND (:enabled IS NULL OR c.enabled = :enabled)")
   long countByFilters(Long indexInfoId, Boolean enabled);
+
+  List<AutoSyncConfig> findAllByEnabled(Boolean enabled);
 }
