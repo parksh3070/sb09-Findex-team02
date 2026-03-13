@@ -13,21 +13,21 @@ import lombok.NoArgsConstructor;
 import org.example.entity.base.BaseEntity;
 
 @Entity
-@Table(name = "integration_configs")
+@Table(name = "auto_sync_configs")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class IntegrationConfig extends BaseEntity {
+public class AutoSyncConfig extends BaseEntity {
   @OneToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "index_id", nullable = false)
   private IndexInfo indexInfo;
 
-  @Column(name = "is_active", nullable = false)
+  @Column(name = "enabled", nullable = false)
   private Boolean enabled = false;
 
   @Column(name = "last_sync_at")
   private Instant lastSyncAt;
 
-  public IntegrationConfig(IndexInfo indexInfo){
+  public AutoSyncConfig(IndexInfo indexInfo){
     this.indexInfo = indexInfo;
   }
 

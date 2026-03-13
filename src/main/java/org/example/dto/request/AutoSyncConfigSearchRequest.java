@@ -1,6 +1,6 @@
 package org.example.dto.request;
 
-public record IntegrationConfigSearchRequest(
+public record AutoSyncConfigSearchRequest(
     Long indexInfoId,
     Boolean enabled,
     Long idAfter,
@@ -10,7 +10,7 @@ public record IntegrationConfigSearchRequest(
     Integer size
 ) {
   // 기본값을 설정하기 위한 컴팩트 생성자
-  public IntegrationConfigSearchRequest {
+  public AutoSyncConfigSearchRequest {
     if (sortField == null) sortField = "indexInfo.indexName";
     if (sortDirection == null) sortDirection = "asc";
     if (size == null) size = 10;
