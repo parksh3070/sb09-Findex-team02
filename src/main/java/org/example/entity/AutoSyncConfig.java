@@ -38,4 +38,5 @@ public class AutoSyncConfig extends BaseEntity {
   public void updateLastSyncAt() {
     this.lastSyncAt = Instant.now();
   }
+
 }

@@ -4,11 +4,11 @@ import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import org.example.dto.data.IndexInfoDto;
 import org.example.dto.request.IndexInfoCreateRequest;
+import org.example.entity.AutoSyncConfig;
 import org.example.entity.IndexInfo;
-import org.example.entity.IntegrationConfig;
 import org.example.entity.type.SourceType;
+import org.example.repository.AutoSyncConfigRepository;
 import org.example.repository.IndexInfoRepository;
-import org.example.repository.IntegrationConfigRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +21,7 @@ public class IndexInfoService {
 
 
     private final IndexInfoRepository indexInfoRepository;
-    private final IntegrationConfigRepository integrationConfigRepository;
+    private final AutoSyncConfigRepository autoSyncConfigRepository;
 
     public IndexInfoDto createIndexInfo(IndexInfoCreateRequest request) {
 
@@ -58,8 +58,8 @@ public class IndexInfoService {
         IndexInfo savedIndexInfo = indexInfoRepository.save(indexInfo);
 
         // 4. 자동 연동 설정 초기화
-        IntegrationConfig integrationConfig = new IntegrationConfig(savedIndexInfo);
-        integrationConfigRepository.save(integrationConfig);
+        AutoSyncConfig autoSyncConfig = new AutoSyncConfig(savedIndexInfo);
+        autoSyncConfigRepository.save(autoSyncConfig);
 
         // 5. DTO 반환
         return new IndexInfoDto(
