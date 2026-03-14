@@ -32,7 +32,7 @@ public class GlobalExceptionHandler {
 
   // 2. 비즈니스 로직 에러 400
   @ExceptionHandler(IllegalArgumentException.class)
-  public ResponseEntity<ErrorResponse> handleIllegalArumentException(IllegalArgumentException e) {
+  public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException e) {
     log.warn("Business Erro: {}", e.getMessage());
 
     ErrorResponse response = new ErrorResponse(
