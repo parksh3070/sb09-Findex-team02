@@ -67,7 +67,7 @@ public class IndexInfoService {
                 savedIndexInfo.getCategoryName(),
                 savedIndexInfo.getIndexName(),
                 savedIndexInfo.getComponent(),
-                savedIndexInfo.getBaseData().atZone(java.time.ZoneOffset.UTC).toLocalDate(),
+                savedIndexInfo.getBaseDate().atZone(java.time.ZoneOffset.UTC).toLocalDate(),
                 savedIndexInfo.getBaseIndex().doubleValue(),
                 savedIndexInfo.getSourceType(),
                 savedIndexInfo.getFavorite()

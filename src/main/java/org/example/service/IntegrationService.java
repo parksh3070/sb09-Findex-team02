@@ -1,5 +1,6 @@
 package org.example.service;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -85,12 +86,19 @@ public class IntegrationService {
 
     try {
       if (indexInfo != null) {
-        indexInfoService.update(indexInfo.getId(), toIndexInfoUpdateRequest(item));
+        //indexInfoService.update(indexInfo.getId(), toIndexInfoUpdateRequest(item));
         job = IntegrationLog.createSuccess(JobType.index_info, indexInfo, Instant.now(), worker);
         log.info("[지수 정보 수정 성공] 이름={}", item.indexName());
       } else {
-        IndexInfo created = indexInfoService.create(toIndexInfoCreateRequest(item));
-        job = IntegrationLog.createSuccess(JobType.index_info, created, Instant.now(), worker);
+        IndexInfoCreateRequest infoCreateRequest = toIndexInfoCreateRequest(item);
+
+        IndexInfo newIndex = new IndexInfo(infoCreateRequest.indexClassification(), infoCreateRequest.indexName(), SourceType.open_api);
+
+        newIndex.setIndexDetails(infoCreateRequest.basePointInTime().atStartOfDay(ZoneId.systemDefault()).toInstant(),
+            BigDecimal.valueOf(infoCreateRequest.baseIndex())
+            , infoCreateRequest.employedItemsCount());
+
+        job = IntegrationLog.createSuccess(JobType.index_info, newIndex, Instant.now(), worker);
         log.info("[지수 정보 등록 성공] 이름={}", item.indexName());
       }
     } catch (Exception e) {
@@ -166,8 +174,8 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
           .orElse(null);
 
       if (existing != null) {
-        indexDataService.update(existing.getId(), toIndexDataUpdateRequest(item));
-        log.info("[지수 데이터 수정 성공] 이름={}, 날짜={}", item.indexName(), dataDate);
+//        indexDataService.update(existing.getId(), toIndexDataUpdateRequest(item));
+//        log.info("[지수 데이터 수정 성공] 이름={}, 날짜={}", item.indexName(), dataDate);
       } else {
         indexDataService.create(toIndexDataCreateRequest(item, indexInfo));
         log.info("[지수 데이터 등록 성공] 이름={}, 날짜={}", item.indexName(), dataDate);
@@ -201,10 +209,10 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
     return indexInfos.stream().collect(Collectors.toMap(
         IndexInfo::getIndexName,
         indexInfo -> indexDataRepository
-            .findByIndexInfoAndDateBetween(indexInfo, startDate, endDate)
+            .findByIndexInfoAndBaseDateBetween(indexInfo, startDate, endDate)
             .stream()
             .collect(Collectors.toMap(
-                IndexData::getBaseDate,
+                d -> d.getBaseDate().atZone(ZoneId.systemDefault()).toLocalDate(),
                 d -> d
             ))
     ));
@@ -214,7 +222,7 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
     return new IndexInfoUpdateRequest(
         item.componentCount(),
         parseLocalDate(item.infoBaseDate()),
-        item.baseIndex(),
+        item.baseIndex().doubleValue(),
         null
     );
   }
@@ -225,7 +233,7 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
         item.indexName(),
         item.componentCount(),
         parseLocalDate(item.infoBaseDate()),
-        item.baseIndex(),
+        item.baseIndex().doubleValue(),
         false
     );
   }

@@ -11,6 +11,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.example.entity.base.BaseEntity;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Entity
 @Table(name = "auto_sync_configs")
@@ -19,6 +21,7 @@ import org.example.entity.base.BaseEntity;
 public class AutoSyncConfig extends BaseEntity {
   @OneToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "index_id", nullable = false)
+  @OnDelete(action = OnDeleteAction.CASCADE)
   private IndexInfo indexInfo;
 
   @Column(name = "enabled", nullable = false)

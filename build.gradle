@@ -1,7 +1,7 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '4.0.3'
-    id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.springframework.boot' version '3.3.4'
+    id 'io.spring.dependency-management' version '1.1.6'
 }
 
 group = 'org.example'
@@ -23,38 +23,49 @@ configurations {
 repositories {
     mavenCentral()
 }
+
 ext {
+    // 부트 3.3.x와 가장 잘 호환되는 최신 클라우드 버전입니다.
     set('springCloudVersion', "2023.0.3")
 }
+
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-h2console'
+    // 1. Spring Boot Starters (표준 명칭으로 수정)
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.springframework.boot:spring-boot-starter-webmvc' // web 대신 webmvc
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
-    implementation 'org.postgresql:postgresql'
+    implementation 'org.springframework.boot:spring-boot-starter-web' // webmvc 대신 web 사용 권장
 
-    // mapstruct
+    // 2. Database
+    implementation 'org.postgresql:postgresql'
+    runtimeOnly 'com.h2database:h2'
+    annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
+
+    // 3. MapStruct & Lombok (순서 중요: lombok이 먼저 오거나 binding이 명시되어야 함)
     implementation 'org.mapstruct:mapstruct:1.5.5.Final'
     annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
     annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
-
-    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
-    implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
-    annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
-
     compileOnly 'org.projectlombok:lombok'
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
-    runtimeOnly 'com.h2database:h2'
     annotationProcessor 'org.projectlombok:lombok'
-    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+
+    // 4. Spring Cloud (OpenFeign 등)
+    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+    // ⚠️ 4.0 버전 에러의 주범이었던 bootstrap을 유지하되, 3.3.4에 맞는 버전으로 관리됩니다.
+    implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap'
+
+    // 5. Swagger (중복 제거 및 최신 버전 유지)
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
+
+    // 6. Tools & Test
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test' // 개별 테스트 스타터 통합
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    implementation 'org.jspecify:jspecify:1.0.0'
     runtimeOnly 'org.postgresql:postgresql'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
 
 }
+
 dependencyManagement {
     imports {
         mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
