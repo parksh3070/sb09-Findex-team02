@@ -1,6 +1,5 @@
 package org.example.dto.request;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import org.example.entity.type.JobType;
 import org.example.entity.type.StatusType;
@@ -13,8 +12,8 @@ public record SyncJobSearchRequest(
     LocalDate baseDateTo,
     String worker,
     StatusType status,
-    Instant jobTimeFrom,
-    Instant jobTimeTo,
+    LocalDate jobTimeFrom,
+    LocalDate jobTimeTo,
 
     Long idAfter,
     String cursor,

@@ -2,7 +2,7 @@ package org.example.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -39,7 +39,7 @@ public class IndexDataService {
     IndexInfo indexInfo = indexInfoRepository.findById(request.indexInfoId())
         .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 지수입니다."));
 
-    Instant baseDate = request.baseDate();
+    LocalDate baseDate = request.baseDate();
 
     // 중복 체크 (indexInfo + baseDate)
     indexDataRepository
@@ -58,7 +58,7 @@ public class IndexDataService {
   }
 
   private static @NonNull IndexData getIndexData(IndexDataCreateRequest request,
-      IndexInfo indexInfo, Instant baseDate) {
+      IndexInfo indexInfo, LocalDate baseDate) {
     IndexData indexData = new IndexData(
         indexInfo,
         baseDate,
@@ -90,8 +90,8 @@ public class IndexDataService {
 
   public List<FavoritePerformanceResponse> getFavoritePerformances(String periodType) {
     ZoneId zoneId = ZoneId.of("Asia/Seoul");
-    Instant today = LocalDate.now(zoneId).atStartOfDay(zoneId).toInstant();
-    Instant baseDate;
+    LocalDate today = LocalDate.now(zoneId).atStartOfDay(zoneId).toLocalDate();
+    LocalDate baseDate;
 
     List<Long> favoriteIndexIds = indexInfoRepository.findFavoriteIndexIds();
 
@@ -112,8 +112,8 @@ public class IndexDataService {
         break;
     }
 
-    List<Instant> baseDates = List.of(today,baseDate);
-    List<IndexData> dataList = indexDataRepository.findAllBaseData(favoriteIndexIds,baseDates);
+    List<LocalDate> baseDates = List.of(today,baseDate);
+    List<IndexData> dataList = indexDataRepository.findAllBaseData(baseDates);
 
 
     Map<Long, List<IndexData>> groupedData = dataList.stream()

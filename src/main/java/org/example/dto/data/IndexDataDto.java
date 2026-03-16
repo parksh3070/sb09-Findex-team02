@@ -2,7 +2,7 @@ package org.example.dto.data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDate;
 
 
 @Schema(description = "지수 데이터 DTO")
@@ -12,7 +12,7 @@ public record IndexDataDto(
     @Schema(description = "지수 정보 ID")
     Long indexInfoId,
     @Schema(description = "기준 일자")
-    Instant baseDate,
+    LocalDate baseDate,
     @Schema(description = "정보가 입력된 출처")
     String sourceType,
     @Schema(description = "시가")

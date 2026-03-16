@@ -8,7 +8,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.time.Instant;
+import java.time.LocalDate;
 import lombok.AccessLevel;
 import lombok.*;
 import org.example.entity.base.BaseEntity;
@@ -34,13 +34,13 @@ public class IntegrationLog extends BaseEntity {
   private IndexData indexData;
 
   @Column(name = "target_date")
-  private Instant targetDate;
+  private LocalDate targetDate;
 
   @Column(name = "worker", length = 255)
   private String worker;
 
   @Column(name = "worked_at")
-  private Instant workedAt;
+  private LocalDate workedAt;
 
   @Enumerated(EnumType.STRING)
   @JdbcTypeCode(SqlTypes.NAMED_ENUM)
@@ -64,14 +64,14 @@ public class IntegrationLog extends BaseEntity {
 
   // 생성자 파라미터 너무 길어져서 분리함
   // 세부 연동 작업 정보 설정
-  public void setIntegrationLogDetails(IndexData indexData, Instant targetDate, String worker, Instant workedAt) {
+  public void setIntegrationLogDetails(IndexData indexData, LocalDate targetDate, String worker, LocalDate workedAt) {
     this.indexData = indexData;
     this.targetDate = targetDate;
     this.worker = worker;
     this.workedAt = workedAt;
   }
   public static IntegrationLog createSuccess(JobType jobType, IndexInfo indexInfo,
-      Instant targetDate, String worker) {
+      LocalDate targetDate, String worker) {
     return IntegrationLog.builder()
         .jobType(jobType)
         .indexInfo(indexInfo)
@@ -81,7 +81,7 @@ public class IntegrationLog extends BaseEntity {
         .build();
   }
   public static IntegrationLog createFailed(JobType jobType, IndexInfo indexInfo,
-      Instant targetDate, String worker) {
+      LocalDate targetDate, String worker) {
     return IntegrationLog.builder()
         .jobType(jobType)
         .indexInfo(indexInfo)

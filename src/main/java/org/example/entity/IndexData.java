@@ -11,7 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDate;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -30,7 +30,7 @@ public class IndexData extends BaseEntity {
   private IndexInfo indexInfo;
 
   @Column(name = "base_date", nullable = false)
-  private Instant baseDate;
+  private LocalDate baseDate;
 
   @Enumerated(EnumType.STRING)
   @JdbcTypeCode(SqlTypes.NAMED_ENUM)
@@ -64,7 +64,7 @@ public class IndexData extends BaseEntity {
   @Column(name = "market_cap")
   private Long marketTotalAmount;
 
-  public IndexData(IndexInfo indexInfo, Instant baseDate, SourceType sourceType) {
+  public IndexData(IndexInfo indexInfo, LocalDate baseDate, SourceType sourceType) {
     super();
     this.indexInfo = indexInfo;
     this.baseDate = baseDate;

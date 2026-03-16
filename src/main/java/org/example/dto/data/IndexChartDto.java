@@ -2,7 +2,7 @@ package org.example.dto.data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 @Schema(description = "지수 차트 데이터 DTO")
 public record IndexChartDto(
@@ -24,7 +24,7 @@ public record IndexChartDto(
   @Schema(description = "차트 데이터 포인트")
   public record DataPoint(
       @Schema(description = "데이터")
-      Instant date,
+      LocalDate date,
       @Schema(description = "값")
       BigDecimal value
   ){}
