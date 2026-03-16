@@ -301,12 +301,9 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
     List<Item> allItems = new ArrayList<>();
     int pageNo = 1;
 
-    LocalDate today = LocalDate.now();
-    String todayStr = today.format(YYYYMMDD);
-    String yesterdayStr = today.minusDays(3).format(YYYYMMDD);
     while (true) {
       OpenApiStockResponseDto response = indexApiClient.getIndexData(
-          serviceKey, PAGE_SIZE, pageNo, yesterdayStr , endDateStr, "json"
+          serviceKey, PAGE_SIZE, pageNo, baseDateStr, endDateStr, "json"
       );
       List<Item> items = extractItems(response);
       allItems.addAll(items);
