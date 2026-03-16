@@ -1,5 +1,6 @@
 package org.example.service;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -21,6 +22,8 @@ import org.example.dto.request.IndexDataCreateRequest;
 import org.example.dto.request.IndexDataUpdateRequest;
 import org.example.dto.request.IndexInfoCreateRequest;
 import org.example.dto.request.IndexInfoUpdateRequest;
+import org.example.dto.request.SyncJobSearchRequest;
+import org.example.dto.response.CursorPageResponseAutoSyncConfigDto;
 import org.example.dto.response.OpenApiStockResponseDto;
 import org.example.dto.response.OpenApiStockResponseDto.Item;
 import org.example.entity.IndexData;
@@ -32,7 +35,10 @@ import org.example.mapper.SyncJobMapper;
 import org.example.repository.IndexDataRepository;
 import org.example.repository.IndexInfoRepository;
 import org.example.repository.IntegrationLogRepository;
+import org.example.repository.SyncJobSpec;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -89,8 +95,15 @@ public class IntegrationService {
         job = IntegrationLog.createSuccess(JobType.index_info, indexInfo, Instant.now(), worker);
         log.info("[지수 정보 수정 성공] 이름={}", item.indexName());
       } else {
-        IndexInfo created = indexInfoService.create(toIndexInfoCreateRequest(item));
-        job = IntegrationLog.createSuccess(JobType.index_info, created, Instant.now(), worker);
+        IndexInfoCreateRequest infoCreateRequest = findByIndexInfoAndBaseDateBetween(item);
+
+        IndexInfo newIndex = new IndexInfo(infoCreateRequest.indexClassification(), infoCreateRequest.indexName(), SourceType.open_api);
+
+        newIndex.setIndexDetails(infoCreateRequest.basePointInTime().atStartOfDay(ZoneId.systemDefault()).toInstant(),
+            BigDecimal.valueOf(infoCreateRequest.baseIndex())
+            , infoCreateRequest.employedItemsCount());
+
+        job = IntegrationLog.createSuccess(JobType.index_info, newIndex, Instant.now(), worker);
         log.info("[지수 정보 등록 성공] 이름={}", item.indexName());
       }
     } catch (Exception e) {
@@ -151,8 +164,7 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
   //지수 데이터 건별 트랜잭션 처리
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public SyncJobDto processIndexDataItem(
-      Item item,
-      Map<String, IndexInfo> indexInfoMap,
+      Item item, Map<String, IndexInfo> indexInfoMap,
       Map<String, Map<LocalDate, IndexData>> existingDataMap,
       String worker) {
 
@@ -184,6 +196,44 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
     return syncJobMapper.toDto(job);
   }
 
+//연동 작업 목록 조회
+@Transactional(readOnly = true)
+public CursorPageResponseAutoSyncConfigDto<SyncJobDto> getSyncJobs(SyncJobSearchRequest request) {
+  int size = request.size();
+
+  List<IntegrationLog> fetched = integrationLogRepository.findAll(
+      SyncJobSpec.of(request), PageRequest.of(0, size + 1, buildSort(request))
+  ).getContent();
+
+  long totalElements = integrationLogRepository.count(SyncJobSpec.of(request));
+
+  boolean hasNext = fetched.size() > size;
+  List<IntegrationLog> pageItems = hasNext ? fetched.subList(0, size) : fetched;
+
+  List<SyncJobDto> content = pageItems.stream()
+      .map(syncJobMapper::toDto)
+      .toList();
+
+  Long nextIdAfter = null;
+  String nextCursor = null;
+  if (hasNext && !pageItems.isEmpty()) {
+    Long lastId = pageItems.get(pageItems.size() - 1).getId();
+    nextIdAfter = lastId;
+    nextCursor = String.valueOf(lastId);
+  }
+  return new CursorPageResponseAutoSyncConfigDto<>(
+      content, nextCursor, nextIdAfter, size, totalElements, hasNext
+  );
+}
+
+//정렬
+  private Sort buildSort(SyncJobSearchRequest request) {
+    Sort.Direction direction = "asc".equalsIgnoreCase(request.sortDirection())
+        ? Sort.Direction.ASC : Sort.Direction.DESC;
+    String field = "targetDate".equalsIgnoreCase(request.sortField())
+        ? "targetDate" : "jobTime";  // null이면 jobTime 기본값
+    return Sort.by(direction, field).and(Sort.by(Sort.Direction.DESC, "id"));
+  }
 
   //API 응답에서 Item 리스트 추출
   private List<Item> extractItems(OpenApiStockResponseDto response) {
@@ -199,8 +249,7 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
       List<IndexInfo> indexInfos, LocalDate startDate, LocalDate endDate) {
 
     return indexInfos.stream().collect(Collectors.toMap(
-        IndexInfo::getIndexName,
-        indexInfo -> indexDataRepository
+        IndexInfo::getIndexName, indexInfo -> indexDataRepository
             .findByIndexInfoAndDateBetween(indexInfo, startDate, endDate)
             .stream()
             .collect(Collectors.toMap(
@@ -214,21 +263,11 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
     return new IndexInfoUpdateRequest(
         item.componentCount(),
         parseLocalDate(item.infoBaseDate()),
-        item.baseIndex(),
+        item.baseIndex().doubleValue(),
         null
     );
   }
-  //item 데이터 toIndexInfoCreateRequest로 변환
-  private IndexInfoCreateRequest toIndexInfoCreateRequest(Item item) {
-    return new IndexInfoCreateRequest(
-        item.CategoryName(),
-        item.indexName(),
-        item.componentCount(),
-        parseLocalDate(item.infoBaseDate()),
-        item.baseIndex(),
-        false
-    );
-  }
+
   private IndexDataCreateRequest toIndexDataCreateRequest(Item item, IndexInfo indexInfo) {
     LocalDate date = parseLocalDate(item.dataBaseDate());
     return new IndexDataCreateRequest(

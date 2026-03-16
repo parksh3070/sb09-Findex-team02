@@ -18,7 +18,7 @@ public record OpenApiStockResponseDto(Response response) {
   public record Items(List<Item> item) {}
 
   public record Item(
-      @JsonProperty("idxCsf") String CategoryName,            // 지수분류명
+      @JsonProperty("idxCsf") String categoryName,            // 지수분류명
       @JsonProperty("idxNm") String indexName,                // 지수명
       @JsonProperty("epyItmsCnt") Integer componentCount,     // 채용종목 수
       @JsonProperty("basPntm") String infoBaseDate,           // 기준 시점
