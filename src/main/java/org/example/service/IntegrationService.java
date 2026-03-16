@@ -209,12 +209,6 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
             ))
     ));
   }
-  //이름이 일치하는 주가 찾기
-  private Optional<Item> findMatchingItem(List<Item> items, String indexName) {
-    return items.stream()
-        .filter(item -> indexName.equals(item.indexName()))
-        .findFirst();
-  }
   //item 데이터 toIndexInfoUpdateRequest로 변환
   private IndexInfoUpdateRequest toIndexInfoUpdateRequest(Item item) {
     return new IndexInfoUpdateRequest(
