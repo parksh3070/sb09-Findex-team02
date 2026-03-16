@@ -16,7 +16,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.example.entity.base.BaseEntity;
-import org.hibernate.annotations.ColumnTransformer;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -39,10 +38,10 @@ public class IndexData extends BaseEntity {
   private SourceType sourceType;
 
   @Column(name = "open_price", precision = 19, scale = 4)
-  private BigDecimal openPrice;
+  private BigDecimal marketPrice;
 
   @Column(name = "close_price", precision = 19, scale = 4)
-  private BigDecimal closePrice;
+  private BigDecimal closingPrice;
 
   @Column(name = "high_price", precision = 19, scale = 4)
   private BigDecimal highPrice;
@@ -51,19 +50,19 @@ public class IndexData extends BaseEntity {
   private BigDecimal lowPrice;
 
   @Column(name = "price_diff", precision = 19, scale = 4)
-  private BigDecimal priceDiff;
+  private BigDecimal versus;
 
   @Column(name = "fluctuation_rate", precision = 19, scale = 4)
   private BigDecimal fluctuationRate;
 
   @Column(name = "trade_volume")
-  private Long tradeVolume;
+  private Long tradingQuantity;
 
   @Column(name = "trade_amount")
-  private Long tradeAmount;
+  private Long tradingPrice;
 
   @Column(name = "market_cap")
-  private Long marketCap;
+  private Long marketTotalAmount;
 
   public IndexData(IndexInfo indexInfo, Instant baseDate, SourceType sourceType) {
     super();
@@ -74,20 +73,20 @@ public class IndexData extends BaseEntity {
 
   // 생성자에 파라미터가 너무 길어져서 따로 분리함
   public void setPrices(BigDecimal open, BigDecimal close, BigDecimal high, BigDecimal low) {
-    this.openPrice = open;
-    this.closePrice = close;
+    this.marketPrice = open;
+    this.closingPrice = close;
     this.highPrice = high;
     this.lowPrice = low;
   }
 
   public void setFluctuationInfo(BigDecimal diff, BigDecimal rate) {
-    this.priceDiff = diff;
+    this.versus = diff;
     this.fluctuationRate = rate;
   }
 
   public void setMarketData(Long volume, Long amount, Long cap) {
-    this.tradeVolume = volume;
-    this.tradeAmount = amount;
-    this.marketCap = cap;
+    this.tradingQuantity = volume;
+    this.tradingPrice = amount;
+    this.marketTotalAmount = cap;
   }
 }
