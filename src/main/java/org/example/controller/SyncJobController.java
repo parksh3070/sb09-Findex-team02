@@ -9,8 +9,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.data.SyncJobDto;
 import org.example.dto.request.IndexDataSyncRequest;
+import org.example.dto.request.SyncJobSearchRequest;
+import org.example.dto.response.CursorPageResponseAutoSyncConfigDto;
 import org.example.service.IntegrationService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -52,6 +56,18 @@ public class SyncJobController {
             worker, syncRequest.baseDateFrom(), syncRequest.baseDateTo(), targetIdList));
       }
       return ResponseEntity.accepted().body(totalResults);
+    }
+
+    //연동 작업 목록 조회
+    @Operation(summary = "연동 작업 목록 조회", description = "필터링, 정렬, 커서 기반 페이지네이션을 지원합니다.")
+    @GetMapping
+    public ResponseEntity<CursorPageResponseAutoSyncConfigDto<SyncJobDto>> getSyncJobs(
+        @ModelAttribute SyncJobSearchRequest request
+    ) {
+      log.info("[연동 작업 목록 조회] 파라미터: {}", request);
+
+      CursorPageResponseAutoSyncConfigDto<SyncJobDto> response = integrationService.getSyncJobs(request);
+      return ResponseEntity.ok(response);
     }
   }
 

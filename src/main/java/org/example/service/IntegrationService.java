@@ -22,6 +22,8 @@ import org.example.dto.request.IndexDataCreateRequest;
 import org.example.dto.request.IndexDataUpdateRequest;
 import org.example.dto.request.IndexInfoCreateRequest;
 import org.example.dto.request.IndexInfoUpdateRequest;
+import org.example.dto.request.SyncJobSearchRequest;
+import org.example.dto.response.CursorPageResponseAutoSyncConfigDto;
 import org.example.dto.response.OpenApiStockResponseDto;
 import org.example.dto.response.OpenApiStockResponseDto.Item;
 import org.example.entity.AutoSyncConfig;
@@ -35,8 +37,11 @@ import org.example.repository.AutoSyncConfigRepository;
 import org.example.repository.IndexDataRepository;
 import org.example.repository.IndexInfoRepository;
 import org.example.repository.IntegrationLogRepository;
+import org.example.repository.SyncJobSpec;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -164,7 +169,7 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
 
       if (existing != null) {
 //        indexDataService.update(existing.getId(), toIndexDataUpdateRequest(item));
-//        log.info("[지수 데이터 수정 성공] 이름={}, 날짜={}", item.indexName(), dataDate);
+        log.info("[지수 데이터 수정 성공] 이름={}, 날짜={}", item.indexName(), dataDate);
       } else {
         IndexData newIndexData = getIndexData(item, indexInfo, dataDate);
         indexDataList.add(newIndexData);
@@ -179,13 +184,43 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
     }
   }
 
-  indexDataRepository.saveAll(indexDataList);
-  integrationLogRepository.saveAll(logList);
+//연동 작업 목록 조회
+@Transactional(readOnly = true)
+public CursorPageResponseAutoSyncConfigDto<SyncJobDto> getSyncJobs(SyncJobSearchRequest request) {
+  int size = request.size();
 
-  log.info("[지수 데이터 연동] 처리 완료. 총 {}건 (기간={} ~ {})",
-      indexDataList.size(), startDateStr, endDateStr);
-  return logList.stream().map(syncJobMapper::toDto).toList();
+  List<IntegrationLog> fetched = integrationLogRepository.findAll(
+      SyncJobSpec.of(request), PageRequest.of(0, size + 1, buildSort(request))
+  ).getContent();
+
+  long totalElements = integrationLogRepository.count(SyncJobSpec.of(request));
+  boolean hasNext = fetched.size() > size;
+  List<IntegrationLog> pageItems = hasNext ? fetched.subList(0, size) : fetched;
+
+  List<SyncJobDto> content = pageItems.stream()
+      .map(syncJobMapper::toDto)
+      .toList();
+
+  Long nextIdAfter = null;
+  String nextCursor = null;
+  if (hasNext && !pageItems.isEmpty()) {
+    Long lastId = pageItems.get(pageItems.size() - 1).getId();
+    nextIdAfter = lastId;
+    nextCursor = String.valueOf(lastId);
+  }
+  return new CursorPageResponseAutoSyncConfigDto<>(
+      content, nextCursor, nextIdAfter, size, totalElements, hasNext
+  );
 }
+
+//정렬
+  private Sort buildSort(SyncJobSearchRequest request) {
+    Sort.Direction direction = "asc".equalsIgnoreCase(request.sortDirection())
+        ? Sort.Direction.ASC : Sort.Direction.DESC;
+    String field = "targetDate".equalsIgnoreCase(request.sortField())
+        ? "targetDate" : "workedAt";
+    return Sort.by(direction, field).and(Sort.by(Sort.Direction.DESC, "id"));
+  }
 
   //API 응답에서 Item 리스트 추출
   private List<Item> extractItems(OpenApiStockResponseDto response) {
@@ -223,7 +258,7 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
   //item 데이터 toIndexInfoCreateRequest로 변환
   private IndexInfoCreateRequest toIndexInfoCreateRequest(Item item) {
     return new IndexInfoCreateRequest(
-        item.CategoryName(),
+        item.categoryName(),
         item.indexName(),
         item.componentCount(),
         parseLocalDate(item.infoBaseDate()),
@@ -231,6 +266,7 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
         false
     );
   }
+
   private IndexDataCreateRequest toIndexDataCreateRequest(Item item, IndexInfo indexInfo) {
     LocalDate date = parseLocalDate(item.dataBaseDate());
     return new IndexDataCreateRequest(
