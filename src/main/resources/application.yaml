@@ -18,6 +18,10 @@ spring:
         highlight_sql: true
         use_sql_comments: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 50            # 한 번에 묶을 크기
+          order_inserts: true          # insert 문 정렬 (배치 필수)
+          order_updates: true
     open-in-view: false
 openapi:
   base-url: https://apis.data.go.kr/1160100/service/GetMarketIndexInfoService

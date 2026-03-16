@@ -24,15 +24,18 @@ import org.example.dto.request.IndexInfoCreateRequest;
 import org.example.dto.request.IndexInfoUpdateRequest;
 import org.example.dto.response.OpenApiStockResponseDto;
 import org.example.dto.response.OpenApiStockResponseDto.Item;
+import org.example.entity.AutoSyncConfig;
 import org.example.entity.IndexData;
 import org.example.entity.IndexInfo;
 import org.example.entity.IntegrationLog;
 import org.example.entity.type.JobType;
 import org.example.entity.type.SourceType;
 import org.example.mapper.SyncJobMapper;
+import org.example.repository.AutoSyncConfigRepository;
 import org.example.repository.IndexDataRepository;
 import org.example.repository.IndexInfoRepository;
 import org.example.repository.IntegrationLogRepository;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -46,8 +49,8 @@ public class IntegrationService {
   private final IntegrationLogRepository integrationLogRepository;
   private final IndexInfoRepository indexInfoRepository;
   private final IndexDataRepository indexDataRepository;
+  private final AutoSyncConfigRepository autoSyncConfigRepository;
   private final IndexApiClient indexApiClient;
-  private final IndexInfoService indexInfoService;
   private final IndexDataService indexDataService;
   private final SyncJobMapper syncJobMapper;
 
@@ -58,6 +61,7 @@ public class IntegrationService {
   private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
   //자수 정보 연동
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public List<SyncJobDto> syncIndexInfos(String worker) {
     String baseDateStr = resolveBaseDate();
     List<Item> fetchedItems = fetchAllItems(baseDateStr, baseDateStr);
@@ -66,53 +70,50 @@ public class IntegrationService {
       log.warn("[지수 정보 연동] API 응답 데이터 없음. 기준일={}", baseDateStr);
       return Collections.emptyList();
     }
+
     Map<String, IndexInfo> indexInfoMap = indexInfoRepository.findAll().stream()
         .collect(Collectors.toMap(IndexInfo::getIndexName, i -> i));
 
-    List<SyncJobDto> results = new ArrayList<>();
+    List<IndexInfo> newIndexInfoList = new ArrayList<>();
+    List<IntegrationLog> logList = new ArrayList<>();
+    List<AutoSyncConfig> autoSyncConfigList = new ArrayList<>();
 
     for (Item item : fetchedItems) {
-      SyncJobDto result = processItem(item, indexInfoMap, worker);
-      results.add(result);
-    }
-    return results;
-  }
+      IndexInfo indexInfo = indexInfoMap.get(item.indexName());
+      try {
+        if (indexInfo != null) {
+          //indexInfoService.update(indexInfo.getId(), toIndexInfoUpdateRequest(item));
+          logList.add(IntegrationLog.createSuccess(JobType.INDEX_INFO, indexInfo,
+              LocalDate.now(), worker));
+          log.info("[지수 정보 수정 성공] 이름={}", item.indexName());
+        } else {
+          IndexInfoCreateRequest infoCreateRequest = toIndexInfoCreateRequest(item);
 
-  //지수 정보 건별 트랜잭션 처리
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
-  public SyncJobDto processItem(Item item, Map<String, IndexInfo> indexInfoMap, String worker) {
-    IntegrationLog job;
-    IndexInfo indexInfo = indexInfoMap.get(item.indexName());
+          IndexInfo newIndex = new IndexInfo(infoCreateRequest.indexClassification(), infoCreateRequest.indexName(), SourceType.OPEN_API);
+          newIndex.setIndexDetails(infoCreateRequest.basePointInTime(),
+              BigDecimal.valueOf(infoCreateRequest.baseIndex())
+              , infoCreateRequest.employedItemsCount());
+          newIndexInfoList.add(newIndex);
+          autoSyncConfigList.add(new AutoSyncConfig(newIndex));
 
-    try {
-      if (indexInfo != null) {
-        //indexInfoService.update(indexInfo.getId(), toIndexInfoUpdateRequest(item));
-        job = IntegrationLog.createSuccess(JobType.INDEX_INFO, indexInfo,
-            LocalDate.now(), worker);
-        log.info("[지수 정보 수정 성공] 이름={}", item.indexName());
-      } else {
-        IndexInfoCreateRequest infoCreateRequest = toIndexInfoCreateRequest(item);
-
-        IndexInfo newIndex = new IndexInfo(infoCreateRequest.indexClassification(), infoCreateRequest.indexName(), SourceType.OPEN_API);
-
-        newIndex.setIndexDetails(infoCreateRequest.basePointInTime(),
-            BigDecimal.valueOf(infoCreateRequest.baseIndex())
-            , infoCreateRequest.employedItemsCount());
-
-        indexInfoRepository.save(newIndex);
-
-        job = IntegrationLog.createSuccess(JobType.INDEX_INFO, newIndex, LocalDate.now(), worker);
-        log.info("[지수 정보 등록 성공] 이름={}", item.indexName());
+          logList.add(IntegrationLog.createSuccess(JobType.INDEX_INFO, newIndex, LocalDate.now(), worker));
+          log.info("[지수 정보 등록 성공] 이름={}", item.indexName());
+        }
+      } catch (Exception e) {
+        log.error("[연동 에러] indexName={}, error={}", item.indexName(), e.getMessage());
+        logList.add(IntegrationLog.createFailed(JobType.INDEX_INFO, indexInfo, LocalDate.now(), worker));
       }
-    } catch (Exception e) {
-      log.error("[연동 에러] indexName={}, error={}", item.indexName(), e.getMessage());
-      job = IntegrationLog.createFailed(JobType.INDEX_INFO, indexInfo, LocalDate.now(), worker);
     }
-    integrationLogRepository.save(job);
-    return syncJobMapper.toDto(job);
+
+    indexInfoRepository.saveAll(newIndexInfoList);
+    integrationLogRepository.saveAll(logList);
+    autoSyncConfigRepository.saveAll(autoSyncConfigList);
+
+    return logList.stream().map(syncJobMapper::toDto).toList();
   }
 
 //지수 데이터 연동
+@Transactional
 public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalDate endDate,
     Long indexInfoId) {
 
@@ -149,25 +150,10 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
   Map<String, Map<LocalDate, IndexData>> existingDataMap =
       buildExistingDataMap(targetIndexInfos, startDate, endDate);
 
-  List<SyncJobDto> results = new ArrayList<>();
+  List<IndexData> indexDataList = new ArrayList<>();
+  List<IntegrationLog> logList = new ArrayList<>();
+
   for (Item item : filteredItems) {
-    results.add(processIndexDataItem(item, indexInfoMap, existingDataMap, worker));
-  }
-
-  log.info("[지수 데이터 연동] 처리 완료. 총 {}건 (기간={} ~ {})",
-      results.size(), startDateStr, endDateStr);
-  return results;
-}
-
-  //지수 데이터 건별 트랜잭션 처리
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
-  public SyncJobDto processIndexDataItem(
-      Item item,
-      Map<String, IndexInfo> indexInfoMap,
-      Map<String, Map<LocalDate, IndexData>> existingDataMap,
-      String worker) {
-
-    IntegrationLog job;
     IndexInfo indexInfo = indexInfoMap.get(item.indexName());
     LocalDate dataDate = parseLocalDate(item.dataBaseDate());
 
@@ -180,21 +166,26 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
 //        indexDataService.update(existing.getId(), toIndexDataUpdateRequest(item));
 //        log.info("[지수 데이터 수정 성공] 이름={}, 날짜={}", item.indexName(), dataDate);
       } else {
-        indexDataService.create(toIndexDataCreateRequest(item, indexInfo));
+        IndexData newIndexData = getIndexData(item, indexInfo, dataDate);
+        indexDataList.add(newIndexData);
         log.info("[지수 데이터 등록 성공] 이름={}, 날짜={}", item.indexName(), dataDate);
       }
-      job = IntegrationLog.createSuccess(JobType.INDEX_DATA, indexInfo, LocalDate.now(), worker);
+      logList.add(IntegrationLog.createSuccess(JobType.INDEX_DATA, indexInfo, LocalDate.now(), worker));
 
     } catch (Exception e) {
       log.error("[지수 데이터 연동 에러] indexName={}, date={}, error={}",
           item.indexName(), dataDate, e.getMessage());
-      job = IntegrationLog.createFailed(JobType.INDEX_DATA, indexInfo, LocalDate.now(), worker);
+      logList.add(IntegrationLog.createFailed(JobType.INDEX_DATA, indexInfo, LocalDate.now(), worker));
     }
-
-    integrationLogRepository.save(job);
-    return syncJobMapper.toDto(job);
   }
 
+  indexDataRepository.saveAll(indexDataList);
+  integrationLogRepository.saveAll(logList);
+
+  log.info("[지수 데이터 연동] 처리 완료. 총 {}건 (기간={} ~ {})",
+      indexDataList.size(), startDateStr, endDateStr);
+  return logList.stream().map(syncJobMapper::toDto).toList();
+}
 
   //API 응답에서 Item 리스트 추출
   private List<Item> extractItems(OpenApiStockResponseDto response) {
@@ -310,9 +301,12 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
     List<Item> allItems = new ArrayList<>();
     int pageNo = 1;
 
+    LocalDate today = LocalDate.now();
+    String todayStr = today.format(YYYYMMDD);
+    String yesterdayStr = today.minusDays(3).format(YYYYMMDD);
     while (true) {
       OpenApiStockResponseDto response = indexApiClient.getIndexData(
-          serviceKey, PAGE_SIZE, pageNo, baseDateStr , endDateStr, "json"
+          serviceKey, PAGE_SIZE, pageNo, yesterdayStr , endDateStr, "json"
       );
       List<Item> items = extractItems(response);
       allItems.addAll(items);
@@ -324,6 +318,30 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
     }
     log.info("[지수 정보 연동] 총 {}건 조회 완료 (기준일={})", allItems.size(), baseDateStr);
     return allItems;
+  }
+
+  // IndexData 초기화
+  private static @NonNull IndexData getIndexData(Item item, IndexInfo indexInfo,
+      LocalDate dataDate) {
+    IndexData newIndexData = new IndexData(indexInfo, dataDate, SourceType.OPEN_API);
+    newIndexData.setPrices(
+        item.openPrice(),
+        item.closePrice(),
+        item.highPrice(),
+        item.lowPrice()
+    );
+    // 등락 정보
+    newIndexData.setFluctuationInfo(
+        item.priceDiff(),
+        item.fluctuationRate()
+    );
+    // 시장 데이터
+    newIndexData.setMarketData(
+        item.tradeVolume(),
+        item.tradeAmount(),
+        item.marketCap()
+    );
+    return newIndexData;
   }
 
 }

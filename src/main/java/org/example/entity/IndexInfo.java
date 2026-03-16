@@ -12,13 +12,22 @@ import org.example.entity.base.BaseEntity;
 import org.example.entity.type.SourceType;
 
 import java.math.BigDecimal;
+import jakarta.persistence.Id;
 
 
 @Entity
 @Table(name = "index_infos")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class IndexInfo extends BaseEntity {
+public class IndexInfo {
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "index_infos_seq")
+    @SequenceGenerator(
+        name = "index_infos_seq",
+        sequenceName = "index_infos_sequence",
+        allocationSize = 50
+    )
+    private Long id;
 
     @Column(name = "category_name", nullable = false, length = 100)
     private String categoryName;

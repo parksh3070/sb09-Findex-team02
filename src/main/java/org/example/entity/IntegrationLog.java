@@ -5,8 +5,11 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import lombok.AccessLevel;
@@ -16,6 +19,7 @@ import org.example.entity.type.JobType;
 import org.example.entity.type.StatusType;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import jakarta.persistence.Id;
 
 @Entity
 @Table(name = "integration_logs")
@@ -23,7 +27,15 @@ import org.hibernate.type.SqlTypes;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class IntegrationLog extends BaseEntity {
+public class IntegrationLog {
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "integration_logs_seq")
+  @SequenceGenerator(
+      name = "integration_logs_seq",
+      sequenceName = "integration_logs_sequence",
+      allocationSize = 50
+  )
+  private Long id;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "index_id", nullable = false)

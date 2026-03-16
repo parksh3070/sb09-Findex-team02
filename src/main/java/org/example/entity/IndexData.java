@@ -1,5 +1,8 @@
 package org.example.entity;
 
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.SequenceGenerator;
 import org.example.entity.type.SourceType;
 
 import jakarta.persistence.Column;
@@ -18,12 +21,21 @@ import lombok.NoArgsConstructor;
 import org.example.entity.base.BaseEntity;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import jakarta.persistence.Id;
 
 @Entity
 @Table(name = "index_data")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class IndexData extends BaseEntity {
+public class IndexData {
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "index_data_seq")
+  @SequenceGenerator(
+      name = "index_data_seq",
+      sequenceName = "index_data_sequence",
+      allocationSize = 50
+  )
+  private Long id;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "index_id", nullable = false)
