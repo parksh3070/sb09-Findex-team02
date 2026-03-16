@@ -244,7 +244,7 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
     LocalDate date = parseLocalDate(item.dataBaseDate());
     return new IndexDataCreateRequest(
         indexInfo.getId(),
-        date != null ? LocalDate.from(date.atStartOfDay(KST).toInstant()) : null,
+        date,
         item.openPrice(),
         item.closePrice(),
         item.highPrice(),
