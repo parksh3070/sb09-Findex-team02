@@ -27,6 +27,9 @@ public class SyncJobController {
     List<SyncJobDto> results = integrationService.syncIndexInfos(clientIp);
     return ResponseEntity.ok(results);
     }
+
+    //지수 데이터 연동
+
   }
 
 
