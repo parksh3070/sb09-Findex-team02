@@ -11,11 +11,11 @@ public interface IndexApiClient {
 
   @GetMapping("/getStockMarketIndex")
   OpenApiStockResponseDto getIndexData(
-      @RequestParam(value="serviceKey") String serviceKey,
+      @RequestParam("serviceKey") String serviceKey,
       @RequestParam("numOfRows") int numOfRows,
       @RequestParam("pageNo") int pageNo,
       @RequestParam("beginBasDt") String beginBasDt,
       @RequestParam("endBasDt") String endBasDt,
-      @RequestParam("resultType") String resultType
+      @RequestParam(value = "resultType", defaultValue = "json") String resultType
   );
 }

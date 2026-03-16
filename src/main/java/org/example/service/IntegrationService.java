@@ -87,7 +87,7 @@ public class IntegrationService {
     try {
       if (indexInfo != null) {
         //indexInfoService.update(indexInfo.getId(), toIndexInfoUpdateRequest(item));
-        job = IntegrationLog.createSuccess(JobType.index_info, indexInfo,
+        job = IntegrationLog.createSuccess(JobType.INDEX_INFO, indexInfo,
             LocalDate.now(), worker);
         log.info("[지수 정보 수정 성공] 이름={}", item.indexName());
       } else {
@@ -99,12 +99,14 @@ public class IntegrationService {
             BigDecimal.valueOf(infoCreateRequest.baseIndex())
             , infoCreateRequest.employedItemsCount());
 
-        job = IntegrationLog.createSuccess(JobType.index_info, newIndex, LocalDate.now(), worker);
+        indexInfoRepository.save(newIndex);
+
+        job = IntegrationLog.createSuccess(JobType.INDEX_INFO, newIndex, LocalDate.now(), worker);
         log.info("[지수 정보 등록 성공] 이름={}", item.indexName());
       }
     } catch (Exception e) {
       log.error("[연동 에러] indexName={}, error={}", item.indexName(), e.getMessage());
-      job = IntegrationLog.createFailed(JobType.index_info, indexInfo, LocalDate.now(), worker);
+      job = IntegrationLog.createFailed(JobType.INDEX_INFO, indexInfo, LocalDate.now(), worker);
     }
     integrationLogRepository.save(job);
     return syncJobMapper.toDto(job);
@@ -181,12 +183,12 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
         indexDataService.create(toIndexDataCreateRequest(item, indexInfo));
         log.info("[지수 데이터 등록 성공] 이름={}, 날짜={}", item.indexName(), dataDate);
       }
-      job = IntegrationLog.createSuccess(JobType.index_data, indexInfo, LocalDate.now(), worker);
+      job = IntegrationLog.createSuccess(JobType.INDEX_DATA, indexInfo, LocalDate.now(), worker);
 
     } catch (Exception e) {
       log.error("[지수 데이터 연동 에러] indexName={}, date={}, error={}",
           item.indexName(), dataDate, e.getMessage());
-      job = IntegrationLog.createFailed(JobType.index_data, indexInfo, LocalDate.now(), worker);
+      job = IntegrationLog.createFailed(JobType.INDEX_DATA, indexInfo, LocalDate.now(), worker);
     }
 
     integrationLogRepository.save(job);
@@ -310,7 +312,7 @@ public List<SyncJobDto> syncIndexData(String worker, LocalDate startDate, LocalD
 
     while (true) {
       OpenApiStockResponseDto response = indexApiClient.getIndexData(
-          serviceKey, pageNo, PAGE_SIZE, baseDateStr, endDateStr, "json"
+          serviceKey, PAGE_SIZE, pageNo, baseDateStr , endDateStr, "json"
       );
       List<Item> items = extractItems(response);
       allItems.addAll(items);
