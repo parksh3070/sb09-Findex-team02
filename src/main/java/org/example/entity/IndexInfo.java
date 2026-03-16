@@ -57,7 +57,9 @@ public class IndexInfo extends BaseEntity {
 
     // 생성자 파라미터가 너무 길어져서 분리
     // 생성자 호출하면서 같이 사용해야함
+
     public void setIndexDetails(LocalDate baseData, BigDecimal baseIndex, Integer component) {
+
         this.baseDate = baseData;
         this.baseIndex = baseIndex;
         this.component = component;
