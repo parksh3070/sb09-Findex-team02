@@ -43,7 +43,7 @@ public class IndexInfoService {
         IndexInfo indexInfo = new IndexInfo(
                 request.indexClassification(),
                 request.indexName(),
-                SourceType.user
+                SourceType.USER
         );
         //기준 시점, 기준 지수, 채용 종목 수를 채워넣기
         indexInfo.setIndexDetails(
