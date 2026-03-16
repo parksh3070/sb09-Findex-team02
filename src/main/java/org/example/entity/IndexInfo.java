@@ -9,7 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.example.entity.base.BaseEntity;
-import org.example.entity.type.SourceType;
+import org.hibernate.boot.jaxb.SourceType;
 
 import java.math.BigDecimal;
 
@@ -31,7 +31,7 @@ public class IndexInfo extends BaseEntity {
     private Integer component;
 
     @Column(name = "base_date", nullable = false)
-    private Instant baseData;
+    private Instant baseDate;
 
     @Column(name = "base_index", nullable = false, precision = 10, scale = 2)
     private BigDecimal baseIndex;
@@ -58,7 +58,7 @@ public class IndexInfo extends BaseEntity {
     // 생성자 파라미터가 너무 길어져서 분리
     // 생성자 호출하면서 같이 사용해야함
     public void setIndexDetails(Instant baseData, BigDecimal baseIndex, Integer component) {
-        this.baseData = baseData;
+        this.baseDate = baseData;
         this.baseIndex = baseIndex;
         this.component = component;
     }

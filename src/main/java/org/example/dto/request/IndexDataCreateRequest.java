@@ -3,6 +3,7 @@ package org.example.dto.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.Instant;
+import org.example.entity.type.SourceType;
 
 @Schema(description = "지수 데이터 생성 요청")
 public record IndexDataCreateRequest(
@@ -27,7 +28,9 @@ public record IndexDataCreateRequest(
     @Schema(description = "거래대금")
     Long tradingPrice,
     @Schema(description = "상장 시가 총액")
-    Long marketTotalAmount
+    Long marketTotalAmount,
+    @Schema(description = "소스 타입")
+    SourceType sourceType
 ) {
 
 }

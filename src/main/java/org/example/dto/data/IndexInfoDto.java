@@ -2,7 +2,7 @@ package org.example.dto.data;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
-import org.hibernate.annotations.SourceType;
+import org.example.entity.type.SourceType;
 
 @Schema(description = "지수 정보 DTO")
 public record IndexInfoDto(
