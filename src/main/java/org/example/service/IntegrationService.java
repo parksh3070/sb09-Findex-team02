@@ -9,6 +9,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -42,6 +43,7 @@ import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,6 +59,8 @@ public class IntegrationService {
   private final AutoSyncConfigRepository autoSyncConfigRepository;
   private final IndexApiClient indexApiClient;
   private final IndexDataService indexDataService;
+  private final IndexInfoService indexInfoService;
+
   private final SyncJobMapper syncJobMapper;
 
   @Value("${openapi.service-key}")
@@ -69,7 +73,10 @@ public class IntegrationService {
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public List<SyncJobDto> syncIndexInfos(String worker) {
     String baseDateStr = resolveBaseDate();
-    List<Item> fetchedItems = fetchAllItems(baseDateStr, baseDateStr);
+    LocalDate baseDate = LocalDate.parse(baseDateStr, YYYYMMDD);
+    String startDateForApiStr = baseDate.minusDays(1).format(YYYYMMDD);
+    String endDateForApiStr = baseDate.plusDays(1).format(YYYYMMDD);
+    List<Item> fetchedItems = fetchAllItems(startDateForApiStr, endDateForApiStr);
 
     if (fetchedItems.isEmpty()) {
       log.warn("[지수 정보 연동] API 응답 데이터 없음. 기준일={}", baseDateStr);
@@ -99,7 +106,7 @@ public class IntegrationService {
       List<AutoSyncConfig> outputAutoSyncConfigList, List<IndexInfo> outputIndexInfoList){
     try {
       if (existing != null) {
-        //indexInfoService.update(indexInfo.getId(), toIndexInfoUpdateRequest(item));
+//        indexInfoService.update(existing.getId(), toIndexInfoUpdateRequest(item));
         log.info("[지수 정보 수정 성공] 이름={}", item.indexName());
         return IntegrationLog.createSuccess(JobType.INDEX_INFO, existing,
             LocalDate.now(), worker);
@@ -130,7 +137,7 @@ public class IntegrationService {
       List<Long> indexInfoIdList) {
 
     String startDateStr = startDate.format(YYYYMMDD);
-    String endDateStr = endDate.format(YYYYMMDD);
+    String endDateStr = endDate.plusDays(1).format(YYYYMMDD);
 
     List<IndexInfo> targetIndexInfos = (indexInfoIdList != null && !indexInfoIdList.isEmpty())
         ? indexInfoRepository.findAllById(indexInfoIdList)
@@ -148,10 +155,11 @@ public class IntegrationService {
     Map<String, IndexInfo> indexInfoMap = targetIndexInfos.stream()
         .collect(Collectors.toMap(IndexInfo::getIndexName, i -> i));
 
-    Map<Long, AutoSyncConfig> configMap = autoSyncConfigRepository.findAllByIndexInfoIdIn(
-            targetIndexInfos.stream().map(IndexInfo::getId).toList()
-        ).stream()
-        .collect(Collectors.toMap(c -> c.getIndexInfo().getId(), c -> c));
+    Map<Long, AutoSyncConfig> configMap = new HashMap<>();
+    for (IndexInfo indexInfo : targetIndexInfos) {
+      autoSyncConfigRepository.findByIndexInfoId(indexInfo.getId())
+          .ifPresent(config -> configMap.put(indexInfo.getId(), config));
+    }
 
     List<Item> fetchedItems = fetchAllItems(startDateStr, endDateStr);
 
@@ -198,7 +206,7 @@ public class IntegrationService {
           .orElse(null);
 
       if (existing != null) {
-        //indexDataService.update(existing.getId(), toIndexDataUpdateRequest(item));
+//        indexDataService.update(existing.getId(), toIndexDataUpdateRequest(item));
         log.info("[지수 데이터 수정 성공] 이름={}, 날짜={}", item.indexName(), dataDate);
       } else {
         IndexData newIndexData = getIndexData(item, indexInfo, dataDate);
@@ -219,9 +227,44 @@ public class IntegrationService {
     public CursorPageResponseAutoSyncConfigDto<SyncJobDto> getSyncJobs (SyncJobSearchRequest request)
     {
       int size = request.size();
+      Sort sort = buildSort(request);
+      Specification<IntegrationLog> spec = SyncJobSpec.of(request);
+
+      if (request.idAfter() != null) {
+        IntegrationLog cursorLog = integrationLogRepository.findById(request.idAfter())
+            .orElse(null);
+
+        if (cursorLog != null) {
+          spec = spec.and((root, query, cb) -> {
+            String sortField = "targetDate".equalsIgnoreCase(request.sortField()) ? "targetDate" : "workedAt";
+            Sort.Direction direction = "asc".equalsIgnoreCase(request.sortDirection()) ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+            LocalDate cursorDate = "targetDate".equals(sortField) ? cursorLog.getTargetDate() : cursorLog.getWorkedAt();
+            Long cursorId = cursorLog.getId();
+
+            if (direction == Sort.Direction.ASC) {
+              return cb.or(
+                  cb.greaterThan(root.get(sortField), cursorDate),
+                  cb.and(
+                      cb.equal(root.get(sortField), cursorDate),
+                      cb.greaterThan(root.get("id"), cursorId)
+                  )
+              );
+            } else { // DESC
+              return cb.or(
+                  cb.lessThan(root.get(sortField), cursorDate),
+                  cb.and(
+                      cb.equal(root.get(sortField), cursorDate),
+                      cb.lessThan(root.get("id"), cursorId)
+                  )
+              );
+            }
+          });
+        }
+      }
 
       List<IntegrationLog> fetched = integrationLogRepository.findAll(
-          SyncJobSpec.of(request), PageRequest.of(0, size + 1, buildSort(request))
+          spec, PageRequest.of(0, size + 1, sort)
       ).getContent();
 
       long totalElements = integrationLogRepository.count(SyncJobSpec.of(request));
@@ -273,8 +316,10 @@ public class IntegrationService {
               .stream()
               .collect(Collectors.toMap(
                   IndexData::getBaseDate,
-                  d -> d
-              ))
+                  d -> d,
+                  (existing, replacement) -> existing
+              )),
+          (existing, replacement) -> existing
       ));
     }
     //item 데이터 toIndexInfoUpdateRequest로 변환
@@ -299,37 +344,6 @@ public class IntegrationService {
       );
     }
 
-    private IndexDataCreateRequest toIndexDataCreateRequest (Item item, IndexInfo indexInfo){
-      LocalDate date = parseLocalDate(item.dataBaseDate());
-      return new IndexDataCreateRequest(
-          indexInfo.getId(),
-          date,
-          item.openPrice(),
-          item.closePrice(),
-          item.highPrice(),
-          item.lowPrice(),
-          item.priceDiff(),
-          item.fluctuationRate(),
-          item.tradeVolume(),
-          item.tradeAmount(),
-          item.marketCap(),
-          SourceType.OPEN_API
-      );
-    }
-
-    private IndexDataUpdateRequest toIndexDataUpdateRequest (Item item){
-      return new IndexDataUpdateRequest(
-          item.openPrice(),
-          item.closePrice(),
-          item.highPrice(),
-          item.lowPrice(),
-          item.priceDiff(),
-          item.fluctuationRate(),
-          item.tradeVolume(),
-          item.tradeAmount(),
-          item.marketCap()
-      );
-    }
 
     //날짜(문자열 -> LocalDate로 변환)
     private LocalDate parseLocalDate (String dateStr){
@@ -346,22 +360,27 @@ public class IntegrationService {
     }
 
 //기준일 결정
-    private String resolveBaseDate () {
-      LocalDate today = LocalDate.now();
-      String todayStr = today.format(YYYYMMDD);
+private String resolveBaseDate() {
+  LocalDate endDate = LocalDate.now();
+  LocalDate startDate = endDate.minusMonths(1);
 
-      OpenApiStockResponseDto probeResponse = indexApiClient.getIndexData(
-          serviceKey, 1, 1, todayStr, todayStr, "json"
-      );
+  String startDateStr = startDate.format(YYYYMMDD);
+  String endDateStr = endDate.format(YYYYMMDD);
 
-      if (!extractItems(probeResponse).isEmpty()) {
-        return todayStr;
-      }
+  OpenApiStockResponseDto probeResponse = indexApiClient.getIndexData(
+      serviceKey, 1, 1, startDateStr, endDateStr, "json"
+  );
 
-      String yesterdayStr = today.minusDays(1).format(YYYYMMDD);
-      log.info("[기준일 fallback] 오늘({}) 데이터 없음 → 전일({}) 사용", todayStr, yesterdayStr);
-      return yesterdayStr;
-    }
+  List<Item> items = extractItems(probeResponse);
+  if (!items.isEmpty()) {
+    String baseDateStr = items.get(0).dataBaseDate();
+    log.info("[기준일 결정] 최근 거래일={}", baseDateStr);
+    return baseDateStr;
+  }
+
+  log.warn("[기준일 fallback] 최근 1개월 내 거래일 없음, 오늘 날짜 사용");
+  return endDateStr;
+}
 
     //페이지네이션으로 전체 데이터 조회
     private List<Item> fetchAllItems (String baseDateStr, String endDateStr){
@@ -369,7 +388,7 @@ public class IntegrationService {
       int pageNo = 1;
 
       while (true) {
-        OpenApiStockResponseDto response = indexApiClient.getIndexData(
+            OpenApiStockResponseDto response = indexApiClient.getIndexData(
             serviceKey, PAGE_SIZE, pageNo, baseDateStr, endDateStr, "json"
         );
         List<Item> items = extractItems(response);
@@ -380,7 +399,7 @@ public class IntegrationService {
         }
         pageNo++;
       }
-      log.info("[지수 정보 연동] 총 {}건 조회 완료 (기준일={})", allItems.size(), baseDateStr);
+      log.info("[지수 정보 연동] 총 {}건 조회 완료 (기간={} ~ {})", allItems.size(), baseDateStr, endDateStr);
       return allItems;
     }
 
@@ -412,7 +431,7 @@ public class IntegrationService {
   public List<SyncJobDto> autoSyncIndexData(List<IndexInfo> targetList, List<AutoSyncConfig> configList, LocalDate minLastSyncDate){
 
     String startDateStr = minLastSyncDate.format(YYYYMMDD);
-    String endDateStr = LocalDate.now().format(YYYYMMDD);
+    String endDateStr = LocalDate.now().plusDays(1).format(YYYYMMDD);
 
     if (targetList.isEmpty()) {
       log.warn("[지수 데이터 자동 연동] 대상 지수 없음.");
@@ -420,7 +439,7 @@ public class IntegrationService {
     }
 
     Map<String, IndexInfo> indexInfoMap = targetList.stream()
-        .collect(Collectors.toMap(IndexInfo::getIndexName, i -> i));
+        .collect(Collectors.toMap(IndexInfo::getIndexName, i -> i, (existing, replacement) -> existing));
 
     Map<String, AutoSyncConfig> autoConfigMap = configList.stream()
         .collect(Collectors.toMap(
@@ -475,4 +494,3 @@ public class IntegrationService {
     }
   }
 }
-
