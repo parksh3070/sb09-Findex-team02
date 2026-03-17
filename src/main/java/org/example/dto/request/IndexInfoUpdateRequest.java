@@ -2,6 +2,7 @@ package org.example.dto.request;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -13,7 +14,7 @@ public class IndexInfoUpdateRequest {
     private Integer component;
 
     // 기준 시점
-    private Instant baseDate;
+    private LocalDate baseDate;
 
     // 기준 지수
     private BigDecimal baseIndex;

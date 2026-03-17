@@ -2,6 +2,7 @@ package org.example.service;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.example.dto.request.IndexInfoCreateRequest;
 import org.example.dto.request.IndexInfoUpdateRequest;
@@ -63,7 +64,7 @@ public class IndexInfoService {
                 ? request.getComponent()
                 : indexInfo.getComponent();
 
-        Instant baseDate = request.getBaseDate() != null
+        LocalDate baseDate = request.getBaseDate() != null
                 ? request.getBaseDate()
                 : indexInfo.getBaseDate();
 

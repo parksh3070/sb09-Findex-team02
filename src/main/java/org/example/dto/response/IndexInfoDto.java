@@ -2,6 +2,7 @@ package org.example.dto.response;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import lombok.Builder;
 import lombok.Getter;
 import org.example.entity.IndexInfo;
@@ -15,7 +16,7 @@ public class IndexInfoDto {
     private String categoryName;
     private String indexName;
     private Integer component;
-    private Instant baseDate;
+    private LocalDate baseDate;
     private BigDecimal baseIndex;
     private SourceType sourceType;
     private Boolean favorite;
