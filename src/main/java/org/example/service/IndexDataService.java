@@ -1,16 +1,19 @@
 package org.example.service;
 
-import java.time.Instant;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -20,6 +23,7 @@ import org.example.dto.data.IndexDataDto;
 import org.example.dto.request.IndexDataCreateRequest;
 import org.example.dto.request.IndexDataSearchRequest;
 import org.example.dto.request.IndexDataUpdateRequest;
+import org.example.dto.response.CursorPageResponseIndexDataDto;
 import org.example.dto.response.FavoritePerformanceResponse;
 import org.example.dto.response.RankedIndexPerformanceDto.IndexPerformanceDto;
 import org.example.entity.IndexData;
@@ -28,6 +32,10 @@ import org.example.mapper.IndexDataMapper;
 import org.example.repository.IndexDataRepository;
 import org.example.repository.IndexInfoRepository;
 import org.jspecify.annotations.NonNull;
+
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -98,22 +106,66 @@ public class IndexDataService {
   }
 
   //조회
-  public List<IndexDataDto> search(IndexDataSearchRequest request) {
+  public CursorPageResponseIndexDataDto<IndexDataDto> search(IndexDataSearchRequest request) {
 
-    return indexDataRepository
-        .findByIndexInfo_IdAndBaseDateBetween(
-            request.indexId(),
-            request.startDate(),
-            request.endDate()
-        )
-        .stream()
+    int size = request.size() == null ? 10 : request.size();
+
+    String sortField = request.sortField() == null ? "id" : request.sortField();
+
+    Sort.Direction direction =
+        request.sortDirection() != null && request.sortDirection().equalsIgnoreCase("desc")
+            ? Sort.Direction.DESC
+            : Sort.Direction.ASC;
+
+    Pageable pageable = PageRequest.of(0, size + 1, Sort.by(direction, sortField)); // ⭐ hasNext 판단용 +1
+
+    List<IndexData> result;
+
+    if (request.idAfter() != null) {
+      result = indexDataRepository.findByIndexInfo_IdAndBaseDateBetweenAndIdGreaterThan(
+          request.indexId(),
+          request.startDate(),
+          request.endDate(),
+          request.idAfter(),
+          pageable
+      );
+    } else {
+      result = indexDataRepository.findByIndexInfo_IdAndBaseDateBetween(
+          request.indexId(),
+          request.startDate(),
+          request.endDate(),
+          pageable
+      );
+    }
+
+    boolean hasNext = result.size() > size;
+
+    if (hasNext) {
+      result = result.subList(0, size);
+    }
+
+    List<IndexDataDto> content = result.stream()
         .map(indexDataMapper::toDto)
         .toList();
-  }
 
+    Long nextIdAfter = content.isEmpty()
+        ? null
+        : result.get(result.size() - 1).getId();
+
+    String nextCursor = nextIdAfter == null ? null : String.valueOf(nextIdAfter);
+
+    return new CursorPageResponseIndexDataDto<>(
+        content,
+        nextCursor,
+        nextIdAfter,
+        size,
+        null, // totalElements (cursor 방식에서는 보통 안씀)
+        hasNext
+    );
+  }
   //업데이트
   @Transactional
-  public Long update(Long indexId, Instant baseDate, IndexDataUpdateRequest request) {
+  public Long update(Long indexId, LocalDate baseDate, IndexDataUpdateRequest request) {
 
     IndexInfo indexInfo = indexInfoRepository.findById(indexId)
         .orElseThrow(() -> new NoSuchElementException("Index not found"));
@@ -145,7 +197,7 @@ public class IndexDataService {
 
   //삭제
   @Transactional
-  public void delete(Long indexId, Instant baseDate) {
+  public void delete(Long indexId, LocalDate baseDate) {
 
     IndexInfo indexInfo = indexInfoRepository.findById(indexId)
         .orElseThrow(() -> new NoSuchElementException("Index not found"));
@@ -155,6 +207,50 @@ public class IndexDataService {
         .orElseThrow(() -> new NoSuchElementException("Index data not found"));
 
     indexDataRepository.delete(indexData);
+  }
+
+  //csv파일로 export
+  public ByteArrayInputStream export(IndexDataSearchRequest request) {
+
+    String sortField = request.sortField() == null ? "id" : request.sortField();
+
+    Sort.Direction direction =
+        request.sortDirection() != null && request.sortDirection().equalsIgnoreCase("desc")
+            ? Sort.Direction.DESC
+            : Sort.Direction.ASC;
+
+    Sort sort = Sort.by(direction, sortField);
+
+    List<IndexData> data = indexDataRepository
+        .findByIndexInfo_IdAndBaseDateBetween(
+            request.indexId(),
+            request.startDate(),
+            request.endDate(),
+            sort
+        );
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintWriter writer = new PrintWriter(out, true, StandardCharsets.UTF_8);
+
+    writer.println("\uFEFFid,indexId,baseDate,openPrice,closePrice,highPrice,lowPrice");
+
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+    for (IndexData i : data) {
+      writer.printf("%d,%d,%s,%s,%s,%s,%s%n",
+          i.getId(),
+          i.getIndexInfo().getId(),
+          i.getBaseDate().format(formatter),
+          i.getMarketPrice(),
+          i.getClosingPrice(),
+          i.getHighPrice(),
+          i.getLowPrice()
+      );
+    }
+
+    writer.flush();
+
+    return new ByteArrayInputStream(out.toByteArray());
   }
 
 
