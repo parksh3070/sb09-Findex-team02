@@ -260,7 +260,7 @@ public class IndexDataService {
   }
 
 
-
+  @Transactional
   public List<FavoritePerformanceResponse> getFavoritePerformances(String periodType) {
     List<LocalDate> lateDates = indexDataRepository.findDistinctByBaseDate(PageRequest.of(0,2));
     if (lateDates == null || lateDates.size() < 2) {
@@ -321,7 +321,7 @@ public class IndexDataService {
         .sorted((a,b) -> b.fluctuationRate().compareTo(a.fluctuationRate()))
         .toList();
   }
-
+  @Transactional
   public List<RankedIndexPerformanceDto> getPerformanceRanking(Long indexInfold, String categoryName, String periodType, Integer limit){
     List<LocalDate> lateDates = indexDataRepository.findDistinctByBaseDate(PageRequest.of(0,2));
     if (lateDates == null || lateDates.size() < 2) {
@@ -402,7 +402,7 @@ public class IndexDataService {
         .limit(rankLimit)
         .toList();
   }
-
+  @Transactional
   public List<IndexChartDto> getIndexChart(Long indexChartId, String periodType, String categoryName){
     List<LocalDate> lateDates = indexDataRepository.findDistinctByBaseDate(PageRequest.of(0,1));
     if(lateDates == null || lateDates.isEmpty()) {
