@@ -35,7 +35,7 @@ public interface AutoSyncConfigApi {
       @Parameter(description = "자동 연동 설정 ID") @PathVariable Long configId
   );
 
-  @Operation(summary = "자동 연동 설정 수정", description = "기존 자동 연결 설정을 수정합니다.")
+  @Operation(summary = "자동 연동 설정 수정", description = "기존 자동 연결 설정의 활성화 여부를 수정합니다.")
   @ResponseStatus(HttpStatus.OK)
   @ApiResponses(value = {
       @ApiResponse(
@@ -55,7 +55,7 @@ public interface AutoSyncConfigApi {
           content = @Content(examples = @ExampleObject(value = "{\"timestamp\": \"2025-03-06T05:39:06.152068Z\", \"status\": 500, \"message\": \"서버 내부 오류입니다.\", \"details\": \"서버에서 알 수 없는 오류가 발생했습니다.\"}"))
       )
   })
-  ResponseEntity<AutoSyncConfigDto> updateUserStatusByUserId(
+  ResponseEntity<AutoSyncConfigDto> updateEnabled(
       @Parameter(description = "자동 연동 설정 ID") Long id,
       @Parameter(description = "수정할 자동 연동 설정 정보") AutoSyncConfigUpdateRequest request
   );

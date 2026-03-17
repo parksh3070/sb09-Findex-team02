@@ -1,6 +1,9 @@
 package org.example.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.example.api.AutoSyncConfigApi;
 import org.example.dto.data.AutoSyncConfigDto;
 import org.example.dto.request.AutoSyncConfigSearchRequest;
 import org.example.dto.request.AutoSyncConfigUpdateRequest;
@@ -21,11 +24,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/auto-sync-configs")
-public class AutoSyncConfigController {
+public class AutoSyncConfigController implements AutoSyncConfigApi {
   private final AutoSyncConfigService autoSyncConfigService;
 
   @GetMapping("/{configId}")
-  ResponseEntity<AutoSyncConfigDto> findById(@PathVariable Long configId){
+  public ResponseEntity<AutoSyncConfigDto> findById(@PathVariable Long configId){
     AutoSyncConfigDto autoSyncConfigDto = autoSyncConfigService.find(configId);
 
     return ResponseEntity
@@ -34,7 +37,7 @@ public class AutoSyncConfigController {
   }
 
   @PatchMapping(path = "/{configId}")
-  public ResponseEntity<AutoSyncConfigDto> updateUserStatusByUserId(@PathVariable Long configId,
+  public ResponseEntity<AutoSyncConfigDto> updateEnabled(@PathVariable Long configId,
       @RequestBody AutoSyncConfigUpdateRequest request) {
     AutoSyncConfigDto autoSyncConfigStatus = autoSyncConfigService.update(configId, request);
     return ResponseEntity
