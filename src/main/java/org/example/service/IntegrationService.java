@@ -1,10 +1,7 @@
 package org.example.service;
 
-import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -19,8 +16,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.client.IndexApiClient;
 import org.example.dto.data.SyncJobDto;
-import org.example.dto.request.IndexDataCreateRequest;
-import org.example.dto.request.IndexDataUpdateRequest;
 import org.example.dto.request.IndexInfoCreateRequest;
 import org.example.dto.request.IndexInfoUpdateRequest;
 import org.example.dto.request.SyncJobSearchRequest;

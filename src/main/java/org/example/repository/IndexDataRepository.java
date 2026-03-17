@@ -46,4 +46,13 @@ public interface IndexDataRepository extends JpaRepository<IndexData, Long> {
       + "ORDER BY d.baseDate DESC")
   List<LocalDate> findDistinctByBaseDate(Pageable pageable);
 
+  @Query("SELECT i FROM IndexData i "
+      + "WHERE i.indexInfo.id IN :ids "
+      + "AND i.baseDate BETWEEN :startDate AND :endDate "
+      + "ORDER BY i.baseDate ASC")
+  List<IndexData> findChartDataBetweenDates(
+      @Param("ids") List<Long> ids,
+      @Param("startDate") LocalDate startDate,
+      @Param("endDate") LocalDate endDate);
+
 }

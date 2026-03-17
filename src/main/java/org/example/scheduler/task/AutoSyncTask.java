@@ -2,27 +2,27 @@ package org.example.scheduler.task;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.data.SyncJobDto;
 import org.example.entity.AutoSyncConfig;
 import org.example.entity.IndexInfo;
-import org.example.entity.IntegrationLog;
 import org.example.repository.AutoSyncConfigRepository;
 import org.example.scheduler.BatchTask;
 import org.example.service.IntegrationService;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class AutoSyncTask implements BatchTask {
 
-  private AutoSyncConfigRepository autoSyncConfigRepository;
-  private IntegrationService integrationService;
+  private final AutoSyncConfigRepository autoSyncConfigRepository;
+  private final IntegrationService integrationService;
 
+  @Transactional
   @Override
   public void execute() {
     List<AutoSyncConfig> configList = autoSyncConfigRepository.findAllEnabledWithIndexInfo();
@@ -41,6 +41,10 @@ public class AutoSyncTask implements BatchTask {
     log.info("[지수 데이터 자동 연동 시작] 날짜={}", startSyncTime );
 
     List<SyncJobDto> integrationLogList = integrationService.autoSyncIndexData(targetList, configList, minLastSync);
+
+    configList.forEach(config->{
+      config.updateLastSyncAt(LocalDate.now());
+    });
 
     log.info("[지수 데이터 자동 연동 성공] 날짜={}, 개수={}", startSyncTime,  integrationLogList.size());
   }

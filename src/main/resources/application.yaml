@@ -28,7 +28,7 @@ openapi:
   service-key: a9ed745a7406899751cf4c7c8c957700ecceb8fb669eee383a358336e12157bf
 findex:
   batch:
-    cron: "* * 0 * * *" #
+    cron: "0 * * * * *" #
 #외부 프록시 넘겨주는 설정 추가
 server:
   forward-headers-strategy: native

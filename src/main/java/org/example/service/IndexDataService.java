@@ -1,21 +1,18 @@
 package org.example.service;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.example.dto.data.IndexChartDto;
 import org.example.dto.data.IndexDataDto;
 import org.example.dto.request.IndexDataCreateRequest;
 import org.example.dto.request.IndexDataSearchRequest;
@@ -176,15 +173,15 @@ public class IndexDataService {
     }
 
     switch(periodType.toUpperCase()) {
+      case "WEEKLY" :
+        baseDate = today.minusWeeks(1);
+        break;
+      case "MONTHLY" :
+        baseDate = today.minusMonths(1);
+        break;
       case "DAILY" :
       default:
         baseDate = lateDates.get(1);
-        break;
-      case "WEEKLY" :
-        baseDate = today.minus(7, ChronoUnit.DAYS);
-        break;
-      case "MONTHLY" :
-        baseDate = today.minus(30,ChronoUnit.DAYS);
         break;
     }
 
@@ -234,15 +231,15 @@ public class IndexDataService {
     LocalDate baseDate;
 
     switch(periodType.toUpperCase()) {
+      case "WEEKLY" :
+        baseDate = today.minusWeeks(1);
+        break;
+      case "MONTHLY" :
+        baseDate = today.minusMonths(1);
+        break;
       case "DAILY" :
       default:
         baseDate = lateDates.get(1);
-        break;
-      case "WEEKLY" :
-        baseDate = today.minus(7, ChronoUnit.DAYS);
-        break;
-      case "MONTHLY" :
-        baseDate = today.minus(30,ChronoUnit.DAYS);
         break;
     }
 
@@ -300,6 +297,92 @@ public class IndexDataService {
           return new RankedIndexPerformanceDto(indexPerformanceDto, rankCounter.getAndIncrement());
         })
         .limit(rankLimit)
+        .toList();
+  }
+
+  public List<IndexChartDto> getIndexChart(Long indexChartId, String periodType, String categoryName){
+    List<LocalDate> lateDates = indexDataRepository.findDistinctByBaseDate(PageRequest.of(0,1));
+    if(lateDates == null || lateDates.isEmpty()) {
+      throw new NoSuchElementException("데이터가 충분하지 않습니다. 현재 DB 날짜 개수: {}");
+    }
+
+    LocalDate endDate = lateDates.get(0);
+    LocalDate startDate;
+
+    String type = (periodType != null) ? periodType.toUpperCase() : "MONTHLY";
+    switch (type) {
+      case "QUARTERLY" :
+        startDate = endDate.minusMonths(3);
+        break;
+      case "YEARLY" :
+        startDate = endDate.minusYears(1);
+        break;
+      case "MONTHLY" :
+      default:
+        startDate = endDate.minusMonths(1);
+        break;
+    }
+
+    // 이동평균선(MA20)
+    LocalDate fetchStartDate = startDate.minusDays(35);
+
+    List<Long> indexChartIds = new ArrayList<>();
+    if(indexChartId != null){
+      indexChartIds.add(indexChartId);
+    } else if(categoryName != null && !categoryName.isEmpty()) {
+      indexChartIds.addAll(indexInfoRepository.findIdsByCategoryName(categoryName));
+    }
+
+    if(indexChartIds.isEmpty()) return Collections.emptyList();
+
+    List<IndexData> dataList = indexDataRepository.findChartDataBetweenDates(indexChartIds, fetchStartDate, endDate);
+
+    return dataList.stream()
+        .collect(Collectors.groupingBy(data -> data.getIndexInfo().getId()))
+        .values().stream()
+        .map(indexDataList -> {
+          IndexInfo info = indexDataList.get(0).getIndexInfo();
+
+          List<IndexChartDto.DataPoint> basicPoints = new ArrayList<>();
+          List<IndexChartDto.DataPoint> ma5Points = new ArrayList<>();
+          List<IndexChartDto.DataPoint> ma20Points = new ArrayList<>();
+
+          for (int i= 0; i< indexDataList.size(); i++) {
+            IndexData current = indexDataList.get(i);
+            LocalDate date = current.getBaseDate();
+            BigDecimal price = current.getClosingPrice();
+
+            if(!date.isBefore(startDate)) {
+              basicPoints.add(new IndexChartDto.DataPoint(date, price));
+
+              if(i >=4) {
+                BigDecimal sum5 = BigDecimal.ZERO;
+                for(int j = 0; j < 5; j++){
+                  sum5 = sum5.add(indexDataList.get(i - j).getClosingPrice());
+                }
+                ma5Points.add(new IndexChartDto.DataPoint(date, sum5.divide(BigDecimal.valueOf(5), 2, RoundingMode.HALF_UP)));
+              }
+
+              if(i >=19) {
+                BigDecimal sum20 = BigDecimal.ZERO;
+                for(int j = 0; j < 20; j++){
+                  sum20 = sum20.add(indexDataList.get(i - j).getClosingPrice());
+                }
+                ma20Points.add(new IndexChartDto.DataPoint(date, sum20.divide(BigDecimal.valueOf(20), 2, RoundingMode.HALF_UP)));
+              }
+            }
+          }
+
+          return new IndexChartDto(
+              info.getId(),
+              info.getCategoryName(),
+              info.getIndexName(),
+              periodType,
+              basicPoints,
+              ma5Points,
+              ma20Points
+          );
+        })
         .toList();
   }
 }

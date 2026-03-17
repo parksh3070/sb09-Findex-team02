@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.example.dto.data.IndexChartDto;
 import org.example.dto.data.IndexDataDto;
 import org.example.dto.request.IndexDataCreateRequest;
 import org.example.dto.request.IndexDataSearchRequest;
@@ -82,5 +83,18 @@ public class IndexDataController {
   ){
     List<RankedIndexPerformanceDto> result = indexDataService.getPerformanceRanking(indexInfoId,categoryName,periodType,rankLimit);
     return ResponseEntity.ok(result);
+  }
+
+
+  @Operation(summary = "지수 차트 조회", description = "지수 차트 데이터를 조회합니다.")
+  @GetMapping("/chart")
+  public ResponseEntity<List<IndexChartDto>> getIndexChart(
+    @RequestParam(required = false) Long indexId,
+    @RequestParam(required = false) String categoryName,
+    @Schema(allowableValues = {"MONTHLY", "QUARTERLY", "YEARLY"})
+    @RequestParam(defaultValue = "MONTHLY") String periodType
+  ){
+    List<IndexChartDto> indexCharList = indexDataService.getIndexChart(indexId, categoryName, periodType);
+    return ResponseEntity.ok(indexCharList);
   }
 }
