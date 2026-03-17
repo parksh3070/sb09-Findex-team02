@@ -1,20 +1,16 @@
 package org.example.dto.request;
 
 import java.math.BigDecimal;
-import java.time.Instant;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import java.time.LocalDate;
 import org.example.entity.type.SourceType;
 
-@Getter
-@NoArgsConstructor
-public class IndexInfoCreateRequest {
-
-    private String categoryName;
-    private String indexName;
-    private Integer component;
-    private Instant baseDate;
-    private BigDecimal baseIndex;
-    private SourceType sourceType;
-    private Boolean favorite;
+public record IndexInfoCreateRequest(
+        String categoryName,
+        String indexName,
+        Integer component,
+        LocalDate baseDate,
+        BigDecimal baseIndex,
+        SourceType sourceType,
+        Boolean favorite
+) {
 }

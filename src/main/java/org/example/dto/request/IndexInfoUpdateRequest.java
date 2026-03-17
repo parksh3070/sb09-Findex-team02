@@ -1,23 +1,12 @@
 package org.example.dto.request;
 
 import java.math.BigDecimal;
-import java.time.Instant;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import java.time.LocalDate;
 
-@Getter
-@NoArgsConstructor
-public class IndexInfoUpdateRequest {
-
-    // 채용 종목 수
-    private Integer component;
-
-    // 기준 시점
-    private Instant baseDate;
-
-    // 기준 지수
-    private BigDecimal baseIndex;
-
-    // 즐겨찾기
-    private Boolean favorite;
+public record IndexInfoUpdateRequest(
+        Integer component,
+        LocalDate baseDate,
+        BigDecimal baseIndex,
+        Boolean favorite
+) {
 }
