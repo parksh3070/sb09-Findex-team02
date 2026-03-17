@@ -26,5 +26,12 @@ public interface AutoSyncConfigRepository extends JpaRepository<AutoSyncConfig, 
 
   List<AutoSyncConfig> findAllByEnabled(Boolean enabled);
 
+  @Query("SELECT asc FROM AutoSyncConfig asc " +
+      "JOIN FETCH asc.indexInfo " +
+      "WHERE asc.enabled = true")
+  List<AutoSyncConfig> findAllEnabledWithIndexInfo();
+
   Optional<AutoSyncConfig> findByIndexInfoId(Long indexInfoId);
+
+  Optional<AutoSyncConfig> findAllByIndexInfoIdIn(List<Long> indexInfoIdlist);
 }

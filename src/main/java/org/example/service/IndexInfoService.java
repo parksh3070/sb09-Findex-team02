@@ -1,12 +1,11 @@
 package org.example.service;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.example.dto.request.IndexInfoCreateRequest;
 import org.example.dto.request.IndexInfoUpdateRequest;
-import org.example.dto.response.IndexInfoDto;
+import org.example.dto.response.IndexInfoResponseDto;
 import org.example.entity.IndexInfo;
 import org.example.repository.IndexInfoRepository;
 import org.springframework.stereotype.Service;
@@ -20,11 +19,11 @@ public class IndexInfoService {
     private final AutoSyncConfigService autoSyncConfigService;
 
     @Transactional
-    public IndexInfoDto createIndexInfo(IndexInfoCreateRequest request) {
+    public IndexInfoResponseDto createIndexInfo(IndexInfoCreateRequest request) {
 
         boolean exists = indexInfoRepository.existsByCategoryNameAndIndexName(
-                request.getCategoryName(),
-                request.getIndexName()
+                request.indexClassification(),
+                request.indexName()
         );
 
         if (exists) {
@@ -32,53 +31,52 @@ public class IndexInfoService {
         }
 
         IndexInfo indexInfo = new IndexInfo(
-                request.getCategoryName(),
-                request.getIndexName(),
-                request.getSourceType()
+                request.indexClassification(),
+                request.indexName(),
+                request.sourceType()
         );
 
         indexInfo.setIndexDetails(
-                request.getBaseDate(),
-                request.getBaseIndex(),
-                request.getComponent()
+                request.basePointInTime(),
+                request.baseIndex(),
+                request.employedItemsCount()
         );
 
-        if (request.getFavorite() != null) {
-            indexInfo.updateFavorite(request.getFavorite());
+        if (request.favorite() != null) {
+            indexInfo.updateFavorite(request.favorite());
         }
 
         IndexInfo savedIndexInfo = indexInfoRepository.save(indexInfo);
 
-        // 자동 연동 설정 초기화
         autoSyncConfigService.create(savedIndexInfo.getId());
 
-        return IndexInfoDto.from(savedIndexInfo);
+        return IndexInfoResponseDto.from(savedIndexInfo);
     }
 
     @Transactional
-    public IndexInfoDto updateIndexInfo(Long id, IndexInfoUpdateRequest request) {
+    public IndexInfoResponseDto updateIndexInfo(Long id, IndexInfoUpdateRequest request) {
         IndexInfo indexInfo = indexInfoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 지수 정보를 찾을 수 없습니다. id=" + id));
 
-        Integer component = request.getComponent() != null
-                ? request.getComponent()
+        Integer component = request.employedItemsCount() != null
+                ? request.employedItemsCount()
                 : indexInfo.getComponent();
 
-        LocalDate baseDate = request.getBaseDate() != null
-                ? request.getBaseDate()
+        LocalDate baseDate = request.basePointInTime() != null
+                ? request.basePointInTime()
                 : indexInfo.getBaseDate();
 
-        BigDecimal baseIndex = request.getBaseIndex() != null
-                ? request.getBaseIndex()
+        BigDecimal baseIndex = request.baseIndex() != null
+                ? request.baseIndex()
                 : indexInfo.getBaseIndex();
 
         indexInfo.setIndexDetails(baseDate, baseIndex, component);
 
-        if (request.getFavorite() != null) {
-            indexInfo.updateFavorite(request.getFavorite());
+        if (request.favorite() != null) {
+            indexInfo.updateFavorite(request.favorite());
         }
 
-        return IndexInfoDto.from(indexInfo);
+        return IndexInfoResponseDto.from(indexInfo);
     }
 
     @Transactional

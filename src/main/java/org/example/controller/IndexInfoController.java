@@ -3,7 +3,7 @@ package org.example.controller;
 import lombok.RequiredArgsConstructor;
 import org.example.dto.request.IndexInfoCreateRequest;
 import org.example.dto.request.IndexInfoUpdateRequest;
-import org.example.dto.response.IndexInfoDto;
+import org.example.dto.response.IndexInfoResponseDto;
 import org.example.service.IndexInfoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,27 +20,19 @@ public class IndexInfoController {
      * 지수 정보 등록
      */
     @PostMapping
-    public ResponseEntity<IndexInfoDto> createIndexInfo(
+    public ResponseEntity<IndexInfoResponseDto> createIndexInfo(
             @RequestBody IndexInfoCreateRequest request
     ) {
-        IndexInfoDto response = indexInfoService.createIndexInfo(request);
+        IndexInfoResponseDto response = indexInfoService.createIndexInfo(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    /**
-     * 지수 정보 수정
-     * 수정 가능 항목:
-     * - 채용 종목 수
-     * - 기준 시점
-     * - 기준 지수
-     * - 즐겨찾기
-     */
     @PatchMapping("/{id}")
-    public ResponseEntity<IndexInfoDto> updateIndexInfo(
+    public ResponseEntity<IndexInfoResponseDto> updateIndexInfo(
             @PathVariable Long id,
             @RequestBody IndexInfoUpdateRequest request
     ) {
-        IndexInfoDto response = indexInfoService.updateIndexInfo(id, request);
+        IndexInfoResponseDto response = indexInfoService.updateIndexInfo(id, request);
         return ResponseEntity.ok(response);
     }
 

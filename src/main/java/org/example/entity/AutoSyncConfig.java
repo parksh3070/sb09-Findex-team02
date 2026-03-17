@@ -41,7 +41,7 @@ public class AutoSyncConfig {
   private Boolean enabled = false;
 
   @Column(name = "last_sync_at")
-  private LocalDate lastSyncAt;
+  private LocalDate lastSyncAt = LocalDate.now();
 
   public AutoSyncConfig(IndexInfo indexInfo){
     this.indexInfo = indexInfo;
@@ -51,8 +51,8 @@ public class AutoSyncConfig {
     this.enabled = status;
   }
 
-  public void updateLastSyncAt() {
-    this.lastSyncAt = LocalDate.now();
+  public void updateLastSyncAt(LocalDate date) {
+    this.lastSyncAt = date;
   }
 
 }

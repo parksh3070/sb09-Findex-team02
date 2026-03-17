@@ -1,13 +1,17 @@
-package org.example.dto.request;
+package org.example.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
-
 import java.time.LocalDate;
+import org.example.entity.IndexInfo;
 import org.example.entity.type.SourceType;
 
-@Schema(description = "지수 정보 생성 요청")
-public record IndexInfoCreateRequest(
+@Schema(description = "지수 정보 응답")
+public record IndexInfoResponseDto(
+
+        @Schema(description = "지수 정보 ID", example = "1")
+        Long id,
+
         @Schema(description = "지수 분류명", example = "KOSPI시리즈")
         String indexClassification,
 
@@ -34,5 +38,16 @@ public record IndexInfoCreateRequest(
         Boolean favorite
 
 ) {
-
+    public static IndexInfoResponseDto from(IndexInfo indexInfo) {
+        return new IndexInfoResponseDto(
+                indexInfo.getId(),
+                indexInfo.getCategoryName(),
+                indexInfo.getIndexName(),
+                indexInfo.getComponent(),
+                indexInfo.getBaseDate(),
+                indexInfo.getBaseIndex(),
+                indexInfo.getSourceType(),
+                indexInfo.getFavorite()
+        );
+    }
 }
