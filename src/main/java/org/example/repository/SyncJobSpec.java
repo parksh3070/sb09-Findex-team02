@@ -38,17 +38,6 @@ public class SyncJobSpec {
       if (request.jobTimeTo() != null) {
         predicates.add(cb.lessThanOrEqualTo(root.get("workedAt"), request.jobTimeTo()));
       }
-      if (request.idAfter() != null) {
-        String direction = request.sortDirection() == null
-            ? "desc"
-            : request.sortDirection();
-
-        if ("asc".equalsIgnoreCase(direction)) {
-          predicates.add(cb.greaterThan(root.get("id"), request.idAfter()));
-        } else {
-          predicates.add(cb.lessThan(root.get("id"), request.idAfter()));
-        }
-      }
 
       return cb.and(predicates.toArray(new Predicate[0]));
     };

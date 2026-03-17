@@ -32,8 +32,3 @@ findex:
 #외부 프록시 넘겨주는 설정 추가
 server:
   forward-headers-strategy: native
-
-logging:
-  level:
-    org.hibernate.engine.jdbc.batch.internal.BatchingBatch: DEBUG
-    org.hibernate.stat: DEBUG
