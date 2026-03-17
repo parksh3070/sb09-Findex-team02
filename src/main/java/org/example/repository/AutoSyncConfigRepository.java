@@ -33,5 +33,5 @@ public interface AutoSyncConfigRepository extends JpaRepository<AutoSyncConfig, 
 
   Optional<AutoSyncConfig> findByIndexInfoId(Long indexInfoId);
 
-  Optional<AutoSyncConfig> findAllByIndexInfoIdIn(List<Long> indexInfoIdlist);
+  List<AutoSyncConfig> findAllByIndexInfoIdIn(List<Long> indexInfoIdlist);
 }
