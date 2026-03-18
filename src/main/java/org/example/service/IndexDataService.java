@@ -1,6 +1,7 @@
 package org.example.service;
 
 
+import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
@@ -36,12 +37,12 @@ import org.example.entity.IndexInfo;
 import org.example.mapper.IndexDataMapper;
 import org.example.repository.IndexDataRepository;
 import org.example.repository.IndexInfoRepository;
+import org.example.repository.IndexQueryRepository;
 import org.jspecify.annotations.NonNull;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,6 +54,7 @@ public class IndexDataService {
   private final IndexDataRepository indexDataRepository;
   private final IndexInfoRepository indexInfoRepository;
   private final IndexDataMapper indexDataMapper;
+  private final IndexQueryRepository indexQueryRepository;
 
   //생성
   @Transactional
@@ -321,8 +323,9 @@ public class IndexDataService {
         .sorted((a,b) -> b.fluctuationRate().compareTo(a.fluctuationRate()))
         .toList();
   }
-  @Transactional
+  @Transactional(readOnly = true)
   public List<RankedIndexPerformanceDto> getPerformanceRanking(Long indexInfold, String categoryName, String periodType, Integer limit){
+
     List<LocalDate> lateDates = indexDataRepository.findDistinctByBaseDate(PageRequest.of(0,2));
     if (lateDates == null || lateDates.size() < 2) {
       throw new NoSuchElementException("데이터가 충분하지 않습니다. 현재 DB 날짜 개수: {}");
@@ -346,20 +349,13 @@ public class IndexDataService {
         break;
     }
 
-    List<Long> rankingIndexIds;
+    List<LocalDate> baseDates = List.of(today,baseDate);
 
-    if (categoryName != null && !categoryName.isEmpty()) {
-      rankingIndexIds = indexInfoRepository.findIdsByCategoryName(categoryName);
-    } else {
-      rankingIndexIds = indexInfoRepository.findAllIds();
-    }
-
-    if (rankingIndexIds.isEmpty()) {
+    List<IndexData> dataList = indexQueryRepository.findDataByDatesAndCategory(baseDates, categoryName);
+    if (dataList.isEmpty()) {
       return Collections.emptyList();
     }
 
-    List<LocalDate> baseDates = List.of(today,baseDate);
-    List<IndexData> dataList = indexDataRepository.findAllBaseData(rankingIndexIds, baseDates);
 
     AtomicInteger rankCounter = new AtomicInteger(1);
 
@@ -374,6 +370,8 @@ public class IndexDataService {
 
           IndexData current = indexData.get(0);
           IndexData before = indexData.get(1);
+
+          if (current == null || before == null) return null;
 
           BigDecimal currentClosingPrice = current.getClosingPrice();
           BigDecimal beforeClosingPrice = before.getClosingPrice();
@@ -396,10 +394,10 @@ public class IndexDataService {
         })
         .filter(Objects::nonNull)
         .sorted((a, b) -> b.fluctuationRate().compareTo(a.fluctuationRate()))
+        .limit(rankLimit)
         .map(indexPerformanceDto -> {
           return new RankedIndexPerformanceDto(indexPerformanceDto, rankCounter.getAndIncrement());
         })
-        .limit(rankLimit)
         .toList();
   }
   @Transactional
