@@ -24,6 +24,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,7 +34,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 
-@Tag(name = "지수 데이터")
+@Tag(name = "지수 데이터 API", description = "지수 데이터 관리 API")
 @RestController
 @RequestMapping("/api/index-data")
 @RequiredArgsConstructor
@@ -41,36 +42,42 @@ public class IndexDataController {
 
   private final IndexDataService indexDataService;
 
+  // 생성 (POST)
+  @Operation(summary = "지수 데이터 등록", description = "새로운 지수 데이터를 등록합니다.")
   @PostMapping
   public Long create(@RequestBody IndexDataCreateRequest request) {
     return indexDataService.create(request);
   }
 
-
-  @GetMapping("/index-data")
+  // 목록 조회 (GET)
+  @Operation(summary = "지수 데이터 목록 조회", description = "지수 데이터 목록을 조회합니다. 필터링, 정렬, 커서 기반 페이지네이션을 지원합니다.")
+  @GetMapping
   public CursorPageResponseIndexDataDto<IndexDataDto> search(
-      @RequestBody IndexDataSearchRequest request
+      @ModelAttribute IndexDataSearchRequest request
   ) {
     return indexDataService.search(request);
   }
 
-  @PatchMapping("/{indexId}/{baseDate}")
+  // 수정 (PATCH)
+  @Operation(summary = "지수 데이터 수정", description = "기존 지수 데이터를 수정합니다.")
+  @PatchMapping("/{id}")
   public Long update(
-      @PathVariable Long indexId,
+      @PathVariable Long id,
       @PathVariable LocalDate baseDate,
       @RequestBody IndexDataUpdateRequest request
   ) {
-    return indexDataService.update(indexId, baseDate, request);
+    return indexDataService.update(id, baseDate, request);
   }
 
-  @DeleteMapping("/{indexId}/{baseDate}")
+  // 삭제 (DELETE)
+  @Operation(summary = "지수 데이터 삭제", description = "지수 데이터를 삭제합니다.")
+  @DeleteMapping("/{id}")
   public void delete(
-      @PathVariable Long indexId,
+      @PathVariable Long id,
       @PathVariable LocalDate baseDate
   ) {
-    indexDataService.delete(indexId, baseDate);
+    indexDataService.delete(id, baseDate);
   }
-
 
 
   @Operation(summary = "관심 지수 성과 조회", description = "즐겨찾기한 지수들의 기간별 성과를 요약하여 조회합니다.")
@@ -82,9 +89,10 @@ public class IndexDataController {
     return ResponseEntity.ok(indexDataService.getFavoritePerformances(periodType));
   }
 
-  @PostMapping("/index-data/export")
+  @Operation(summary = "지수 데이터를 CSV export", description = "지수 데이터를 CSV 파일로 export합니다.")
+  @GetMapping("/export/csv")
   public ResponseEntity<InputStreamResource> export(
-      @RequestBody IndexDataSearchRequest request
+      @ModelAttribute IndexDataSearchRequest request
   ) {
 
     ByteArrayInputStream csv = indexDataService.export(request);
