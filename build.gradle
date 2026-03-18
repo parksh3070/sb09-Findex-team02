@@ -70,6 +70,8 @@ dependencies {
     implementation 'org.jspecify:jspecify:1.0.0'
     runtimeOnly 'org.postgresql:postgresql'
 
+    implementation 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.0'
+
 }
 
 dependencyManagement {

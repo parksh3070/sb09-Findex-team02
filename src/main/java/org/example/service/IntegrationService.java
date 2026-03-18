@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.client.IndexApiClient;
 import org.example.dto.data.SyncJobDto;
+import org.example.dto.request.IndexDataUpdateRequest;
 import org.example.dto.request.IndexInfoCreateRequest;
 import org.example.dto.request.IndexInfoUpdateRequest;
 import org.example.dto.request.SyncJobSearchRequest;
@@ -42,6 +43,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StopWatch;
 
 @Service
 @RequiredArgsConstructor
@@ -72,12 +74,10 @@ public class IntegrationService {
     String startDateForApiStr = baseDate.minusDays(1).format(YYYYMMDD);
     String endDateForApiStr = baseDate.plusDays(1).format(YYYYMMDD);
     List<Item> fetchedItems = fetchAllItems(startDateForApiStr, endDateForApiStr);
-
     if (fetchedItems.isEmpty()) {
       log.warn("[지수 정보 연동] API 응답 데이터 없음. 기준일={}", baseDateStr);
       return Collections.emptyList();
     }
-
     Map<String, IndexInfo> indexInfoMap = indexInfoRepository.findAll().stream()
         .collect(Collectors.toMap(IndexInfo::getIndexName, i -> i));
 
@@ -86,43 +86,24 @@ public class IntegrationService {
     List<AutoSyncConfig> autoSyncConfigList = new ArrayList<>();
 
     for (Item item : fetchedItems) {
-      IndexInfo indexInfo = indexInfoMap.get(item.indexName());
-      logList.add(processIndexInfoItem(item, indexInfo, worker, autoSyncConfigList, newIndexInfoList));
-    }
+      IndexInfo existing = indexInfoMap.get(item.indexName());
+      if (existing != null) {
+        existing.updateFromApi(toIndexInfoUpdateRequest(item));
+        logList.add(IntegrationLog.createSuccess(JobType.INDEX_INFO, existing, LocalDate.now(), worker));
+      } else {
+        IndexInfoCreateRequest createReq = toIndexInfoCreateRequest(item);
+        IndexInfo newIndex = new IndexInfo(createReq.indexName(), createReq.indexName(), SourceType.OPEN_API);
+        newIndex.setIndexDetails(createReq.basePointInTime(), createReq.baseIndex(), createReq.employedItemsCount());
 
+        newIndexInfoList.add(newIndex);
+        autoSyncConfigList.add(new AutoSyncConfig(newIndex));
+        logList.add(IntegrationLog.createSuccess(JobType.INDEX_INFO, newIndex, LocalDate.now(), worker));
+      }
+      }
     indexInfoRepository.saveAll(newIndexInfoList);
     integrationLogRepository.saveAll(logList);
     autoSyncConfigRepository.saveAll(autoSyncConfigList);
-
     return logList.stream().map(syncJobMapper::toDto).toList();
-  }
-
-  private IntegrationLog processIndexInfoItem(Item item, IndexInfo existing, String worker,
-      List<AutoSyncConfig> outputAutoSyncConfigList, List<IndexInfo> outputIndexInfoList){
-    try {
-      if (existing != null) {
-//        indexInfoService.update(existing.getId(), toIndexInfoUpdateRequest(item));
-        log.info("[지수 정보 수정 성공] 이름={}", item.indexName());
-        return IntegrationLog.createSuccess(JobType.INDEX_INFO, existing,
-            LocalDate.now(), worker);
-      } else {
-        IndexInfoCreateRequest infoCreateRequest = toIndexInfoCreateRequest(item);
-
-        IndexInfo newIndex = new IndexInfo(infoCreateRequest.indexName(),
-            infoCreateRequest.indexName(), SourceType.OPEN_API);
-        newIndex.setIndexDetails(LocalDate.from(infoCreateRequest.basePointInTime()),
-            infoCreateRequest.baseIndex()
-            , infoCreateRequest.employedItemsCount());
-        outputIndexInfoList.add(newIndex);
-        outputAutoSyncConfigList.add(new AutoSyncConfig(newIndex));
-
-        log.info("[지수 정보 등록 성공] 이름={}", item.indexName());
-        return IntegrationLog.createSuccess(JobType.INDEX_INFO, newIndex, LocalDate.now(), worker);
-      }
-    } catch (Exception e) {
-      log.error("[연동 에러] indexName={}, error={}", item.indexName(), e.getMessage());
-      return IntegrationLog.createFailed(JobType.INDEX_INFO, existing, LocalDate.now(), worker);
-    }
   }
 
 
@@ -201,7 +182,7 @@ public class IntegrationService {
           .orElse(null);
 
       if (existing != null) {
-//        indexDataService.update(existing.getId(), toIndexDataUpdateRequest(item));
+        indexDataService.update(existing.getId(), dataDate,toIndexDataUpdateRequest(item));
         log.info("[지수 데이터 수정 성공] 이름={}, 날짜={}", item.indexName(), dataDate);
       } else {
         IndexData newIndexData = getIndexData(item, indexInfo, dataDate);
@@ -216,7 +197,19 @@ public class IntegrationService {
       return IntegrationLog.createFailed(JobType.INDEX_DATA, indexInfo, LocalDate.now(), worker);
     }
   }
-
+  private IndexDataUpdateRequest toIndexDataUpdateRequest (Item item){
+    return new IndexDataUpdateRequest(
+        item.openPrice(),
+        item.closePrice(),
+        item.highPrice(),
+        item.lowPrice(),
+        item.priceDiff(),
+        item.fluctuationRate(),
+        item.tradeVolume(),
+        item.tradeAmount(),
+        item.marketCap()
+    );
+  }
 //연동 작업 목록 조회
     @Transactional(readOnly = true)
     public CursorPageResponseAutoSyncConfigDto<SyncJobDto> getSyncJobs (SyncJobSearchRequest request)
