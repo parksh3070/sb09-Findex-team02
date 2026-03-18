@@ -89,7 +89,8 @@ public class IntegrationLog {
         .indexInfo(indexInfo)
         .targetDate(targetDate)
         .worker(worker)
-        .result(StatusType.success)
+        .status(StatusType.SUCCESS)
+        .result(StatusType.SUCCESS)
         .build();
   }
   public static IntegrationLog createFailed(JobType jobType, IndexInfo indexInfo,
@@ -99,7 +100,8 @@ public class IntegrationLog {
         .indexInfo(indexInfo)
         .targetDate(targetDate)
         .worker(worker)
-        .result(StatusType.fail)
+        .status(StatusType.FAIL)
+        .result(StatusType.FAIL)
         .build();
   }
 
