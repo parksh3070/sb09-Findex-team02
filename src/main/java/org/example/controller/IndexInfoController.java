@@ -33,7 +33,7 @@ public class IndexInfoController {
     /**
      * 지수 정보 목록 조회
      */
-    @GetMapping
+    @GetMapping("/summaries")
     public ResponseEntity<CursorPageResponseIndexInfoDto<IndexInfoResponseDto>> findIndexInfosByCursor(
             @ParameterObject IndexInfoSearchRequest request
     ) {

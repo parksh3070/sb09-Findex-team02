@@ -90,18 +90,18 @@ public class IndexInfo {
         }
     }
     //업데이트 메서드 추가
-//    public void updateFromApi(IndexInfoUpdateRequest request) {
-//        if (request.employedItemsCount() != null) {
-//            this.component = request.employedItemsCount();
-//        }
-//        if (request.basePointInTime() != null) {
-//            this.baseDate = request.basePointInTime();
-//        }
-//        if (request.baseIndex() != null) {
-//            this.baseIndex = request.baseIndex();
-//        }
-//        if (request.favorite() != null) {
-//            this.favorite = request.favorite();
-//        }
-//    }
+    public void updateFromApi(IndexInfoUpdateRequest request) {
+        if (request.employedItemsCount() != null) {
+            this.component = request.employedItemsCount();
+        }
+        if (request.basePointInTime() != null) {
+            this.baseDate = request.basePointInTime();
+        }
+        if (request.baseIndex() != null) {
+            this.baseIndex = request.baseIndex();
+        }
+        if (request.favorite() != null) {
+            this.favorite = request.favorite();
+        }
+    }
 }

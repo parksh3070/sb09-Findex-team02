@@ -102,16 +102,16 @@ public class IndexData {
     this.tradingPrice = amount;
     this.marketTotalAmount = cap;
   }
-//  //업데이트 메서드 추가
-//  public void updateFromApi(IndexDataUpdateRequest request) {
-//    this.marketPrice = request.marketPrice();
-//    this.closingPrice = request.closingPrice();
-//    this.highPrice = request.highPrice();
-//    this.lowPrice = request.lowPrice();
-//    this.versus = request.versus();
-//    this.fluctuationRate = request.fluctuationRate();
-//    this.tradingQuantity = request.tradingQuantity();
-//    this.tradingPrice = request.tradingPrice();
-//    this.marketTotalAmount = request.marketTotalAmount();
-//  }
+  //업데이트 메서드 추가
+  public void updateFromApi(IndexDataUpdateRequest request) {
+    this.marketPrice = request.marketPrice();
+    this.closingPrice = request.closingPrice();
+    this.highPrice = request.highPrice();
+    this.lowPrice = request.lowPrice();
+    this.versus = request.versus();
+    this.fluctuationRate = request.fluctuationRate();
+    this.tradingQuantity = request.tradingQuantity();
+    this.tradingPrice = request.tradingPrice();
+    this.marketTotalAmount = request.marketTotalAmount();
+  }
 }

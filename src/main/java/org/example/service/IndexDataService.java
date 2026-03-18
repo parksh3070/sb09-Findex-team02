@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.math.BigDecimal;
@@ -168,7 +169,7 @@ public class IndexDataService {
         nextCursor,
         nextIdAfter,
         size,
-        null, // totalElements (cursor 방식에서는 보통 안씀)
+        0L, // totalElements (cursor 방식에서는 보통 안씀)
         hasNext
     );
   }
@@ -324,8 +325,9 @@ public class IndexDataService {
         .sorted((a,b) -> b.fluctuationRate().compareTo(a.fluctuationRate()))
         .toList();
   }
+
   @Transactional(readOnly = true)
-  public List<RankedIndexPerformanceDto> getPerformanceRanking(Long indexInfold, String categoryName, String periodType, Integer limit){
+  public List<RankedIndexPerformanceDto> getPerformanceRanking(Long indexInfold, String indexName, String periodType, Integer limit){
 
     List<LocalDate> lateDates = indexDataRepository.findDistinctByBaseDate(PageRequest.of(0,2));
     if (lateDates == null || lateDates.size() < 2) {
@@ -352,7 +354,7 @@ public class IndexDataService {
 
     List<LocalDate> baseDates = List.of(today,baseDate);
 
-    List<IndexData> dataList = indexQueryRepository.findDataByDatesAndCategory(baseDates, categoryName);
+    List<IndexData> dataList = indexQueryRepository.findDataByDatesAndIndexName(baseDates, indexName);
     if (dataList.isEmpty()) {
       return Collections.emptyList();
     }
@@ -368,6 +370,8 @@ public class IndexDataService {
           List<IndexData> indexData = entry.getValue();
 
           if(indexData.size() < 2) return null;
+
+          indexData.sort((d1, d2) -> d2.getBaseDate().compareTo(d1.getBaseDate()));
 
           IndexData current = indexData.get(0);
           IndexData before = indexData.get(1);
@@ -401,8 +405,9 @@ public class IndexDataService {
         })
         .toList();
   }
-  @Transactional
-  public List<IndexChartDto> getIndexChart(Long indexChartId, String categoryName, String periodType){
+
+  @Transactional(readOnly = true)
+  public List<IndexChartDto> getIndexChart(Long indexChartId, String indexName, String periodType){
     List<LocalDate> lateDates = indexDataRepository.findDistinctByBaseDate(PageRequest.of(0,1));
     if(lateDates == null || lateDates.isEmpty()) {
       throw new NoSuchElementException("데이터가 충분하지 않습니다. 현재 DB 날짜 개수: {}");
@@ -431,8 +436,8 @@ public class IndexDataService {
     List<Long> indexChartIds = new ArrayList<>();
     if(indexChartId != null){
       indexChartIds.add(indexChartId);
-    } else if(categoryName != null && !categoryName.isEmpty()) {
-      indexChartIds.addAll(indexInfoRepository.findIdsByCategoryName(categoryName));
+    } else if(indexName != null && !indexName.isEmpty()) {
+      indexChartIds.addAll(indexInfoRepository.findIdsByIndexName(indexName));
     }
 
     if(indexChartIds.isEmpty()) return Collections.emptyList();
@@ -443,6 +448,7 @@ public class IndexDataService {
         .collect(Collectors.groupingBy(data -> data.getIndexInfo().getId()))
         .values().stream()
         .map(indexDataList -> {
+          indexDataList.sort(Comparator.comparing(IndexData::getBaseDate));
           IndexInfo info = indexDataList.get(0).getIndexInfo();
 
           List<IndexChartDto.DataPoint> basicPoints = new ArrayList<>();

@@ -108,12 +108,12 @@ public class IndexDataController {
   @GetMapping("/performance/rank")
   public ResponseEntity<List<RankedIndexPerformanceDto>> getRankingPerformance(
       @RequestParam(required = false) Long indexInfoId,
-      @RequestParam(required = false) String categoryName,
+      @RequestParam(required = false) String indexName,
       @Schema(allowableValues = {"DAILY", "WEEKLY", "MONTHLY"})
       @RequestParam(defaultValue = "DAILY") String periodType,
       @RequestParam(defaultValue = "10") Integer rankLimit
   ){
-    List<RankedIndexPerformanceDto> result = indexDataService.getPerformanceRanking(indexInfoId,categoryName,periodType,rankLimit);
+    List<RankedIndexPerformanceDto> result = indexDataService.getPerformanceRanking(indexInfoId, indexName, periodType, rankLimit);
     return ResponseEntity.ok(result);
   }
 
@@ -121,12 +121,12 @@ public class IndexDataController {
   @Operation(summary = "지수 차트 조회", description = "지수 차트 데이터를 조회합니다.")
   @GetMapping("/chart")
   public ResponseEntity<List<IndexChartDto>> getIndexChart(
-    @RequestParam(required = false) Long indexId,
-    @RequestParam(required = false) String categoryName,
+    @RequestParam(required = false) Long indexChartId,
+    @RequestParam(required = false) String indexName,
     @Schema(allowableValues = {"MONTHLY", "QUARTERLY", "YEARLY"})
     @RequestParam(defaultValue = "MONTHLY") String periodType
   ){
-    List<IndexChartDto> indexCharList = indexDataService.getIndexChart(indexId, categoryName, periodType);
+    List<IndexChartDto> indexCharList = indexDataService.getIndexChart(indexChartId, indexName, periodType);
     return ResponseEntity.ok(indexCharList);
   }
 }

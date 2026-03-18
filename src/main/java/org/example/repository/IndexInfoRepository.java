@@ -24,6 +24,6 @@ public interface IndexInfoRepository extends JpaRepository<IndexInfo, Long>, Ind
 
     @Query("SELECT i.id "
             + "FROM IndexInfo i "
-            + "WHERE i.categoryName = :categoryName")
-    List<Long> findIdsByCategoryName(@Param("categoryName") String categoryName);
+            + "WHERE i.indexName = :indexName")
+    List<Long> findIdsByIndexName(@Param("indexName") String indexName);
 }

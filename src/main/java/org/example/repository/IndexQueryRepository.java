@@ -18,21 +18,21 @@ public class IndexQueryRepository {
 
   private final JPAQueryFactory jpaQueryFactory;
 
-  public List<IndexData> findDataByDatesAndCategory(List<LocalDate> baseDates, String categoryName){
+  public List<IndexData> findDataByDatesAndIndexName(List<LocalDate> baseDates, String indexName){
     return jpaQueryFactory
         .selectFrom(indexData)
         .join(indexData.indexInfo, indexInfo).fetchJoin()
         .where(
             indexData.baseDate.in(baseDates),
-            categoryEq(categoryName)
+            indexNameEq(indexName)
         )
         .fetch();
   }
 
-  public BooleanExpression categoryEq(String categoryName){
-    if(!StringUtils.hasText(categoryName)){
+  public BooleanExpression indexNameEq(String indexName){
+    if(!StringUtils.hasText(indexName)){
       return null;
     }
-    return indexInfo.categoryName.eq(categoryName);
+    return indexInfo.indexName.eq(indexName);
   }
 }
