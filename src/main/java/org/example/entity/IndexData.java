@@ -102,7 +102,7 @@ public class IndexData {
     this.tradingPrice = amount;
     this.marketTotalAmount = cap;
   }
-  //업데이트 메서드 추가
+//  //업데이트 메서드 추가
   public void updateFromApi(IndexDataUpdateRequest request) {
     this.marketPrice = request.marketPrice();
     this.closingPrice = request.closingPrice();
