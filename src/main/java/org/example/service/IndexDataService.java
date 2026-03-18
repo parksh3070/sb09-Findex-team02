@@ -34,6 +34,7 @@ import org.example.dto.response.RankedIndexPerformanceDto;
 import org.example.dto.response.RankedIndexPerformanceDto.IndexPerformanceDto;
 import org.example.entity.IndexData;
 import org.example.entity.IndexInfo;
+import org.example.entity.type.SourceType;
 import org.example.mapper.IndexDataMapper;
 import org.example.repository.IndexDataRepository;
 import org.example.repository.IndexInfoRepository;
@@ -87,7 +88,7 @@ public class IndexDataService {
     IndexData indexData = new IndexData(
         indexInfo,
         baseDate,
-        request.sourceType()
+        SourceType.USER
     );
 
     // 가격 정보

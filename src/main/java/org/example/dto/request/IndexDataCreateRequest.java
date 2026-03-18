@@ -29,9 +29,9 @@ public record IndexDataCreateRequest(
     @Schema(description = "거래대금")
     Long tradingPrice,
     @Schema(description = "상장 시가 총액")
-    Long marketTotalAmount,
-    @Schema(description = "소스 타입")
-    SourceType sourceType
+    Long marketTotalAmount
+//    @Schema(description = "소스 타입")
+//    SourceType sourceType
 ) {
 
 }
