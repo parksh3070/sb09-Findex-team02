@@ -168,7 +168,7 @@ public class IndexDataService {
         nextCursor,
         nextIdAfter,
         size,
-        null, // totalElements (cursor 방식에서는 보통 안씀)
+        0L ,// totalElements (cursor 방식에서는 보통 안씀)
         hasNext
     );
   }

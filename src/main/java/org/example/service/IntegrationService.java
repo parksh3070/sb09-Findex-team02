@@ -80,18 +80,27 @@ public class IntegrationService {
     List<AutoSyncConfig> autoSyncConfigList = new ArrayList<>();
 
     for (Item item : fetchedItems) {
-      IndexInfo existing = indexInfoMap.get(item.indexName());
-      if (existing != null) {
-        existing.updateFromApi(toIndexInfoUpdateRequest(item));
-        logList.add(IntegrationLog.createSuccess(JobType.INDEX_INFO, existing, LocalDate.now(), worker));
-      } else {
-        IndexInfoCreateRequest createReq = toIndexInfoCreateRequest(item);
-        IndexInfo newIndex = new IndexInfo(createReq.indexName(), createReq.indexName(), SourceType.OPEN_API);
-        newIndex.setIndexDetails(createReq.basePointInTime(), createReq.baseIndex(), createReq.employedItemsCount());
+      try {
+        IndexInfo existing = indexInfoMap.get(item.indexName());
+        if (existing != null) {
+          existing.updateFromApi(toIndexInfoUpdateRequest(item));
+          logList.add(
+              IntegrationLog.createSuccess(JobType.INDEX_INFO, existing, LocalDate.now(), worker));
+        } else {
+          IndexInfoCreateRequest createReq = toIndexInfoCreateRequest(item);
+          IndexInfo newIndex = new IndexInfo(createReq.indexName(), createReq.indexName(),
+              SourceType.OPEN_API);
+          newIndex.setIndexDetails(createReq.basePointInTime(), createReq.baseIndex(),
+              createReq.employedItemsCount());
 
-        newIndexInfoList.add(newIndex);
-        autoSyncConfigList.add(new AutoSyncConfig(newIndex));
-        logList.add(IntegrationLog.createSuccess(JobType.INDEX_INFO, newIndex, LocalDate.now(), worker));
+          newIndexInfoList.add(newIndex);
+          autoSyncConfigList.add(new AutoSyncConfig(newIndex));
+          logList.add(
+              IntegrationLog.createSuccess(JobType.INDEX_INFO, newIndex, LocalDate.now(), worker));
+        }
+      } catch (Exception e) {
+        log.error("[지수 정보 연동 실패] indexName = {}, errer = {}", item.indexName(),e.getMessage() );
+        logList.add(IntegrationLog.createFailed(JobType.INDEX_INFO, null, LocalDate.now(), worker));
       }
       }
     indexInfoRepository.saveAll(newIndexInfoList);
@@ -124,22 +133,27 @@ public class IntegrationService {
       IndexInfo indexInfo = indexInfoMap.get(item.indexName());
       if (indexInfo == null)
         continue;
-      LocalDate dataDate = parseLocalDate(item.dataBaseDate());
-      IndexData existing = Optional.ofNullable(existingDataMap.get(item.indexName()))
-          .map(dateMap -> dateMap.get(dataDate)).orElse(null);
+      try {
+        LocalDate dataDate = parseLocalDate(item.dataBaseDate());
+        IndexData existing = Optional.ofNullable(existingDataMap.get(item.indexName()))
+            .map(dateMap -> dateMap.get(dataDate)).orElse(null);
 
-      if (existing != null) {
-        existing.updateFromApi(toIndexDataUpdateRequest(item));
-      } else {
-        newIndexDataList.add(getIndexData(item, indexInfo, dataDate));
-      }
-      logList.add(
-          IntegrationLog.createSuccess(JobType.INDEX_DATA, indexInfo, LocalDate.now(), worker));
+        if (existing != null) {
+          existing.updateFromApi(toIndexDataUpdateRequest(item));
+        } else {
+          newIndexDataList.add(getIndexData(item, indexInfo, dataDate));
+        }
+        logList.add(
+            IntegrationLog.createSuccess(JobType.INDEX_DATA, indexInfo, LocalDate.now(), worker));
 
-      // 연동 후 자동 연동 설정에 최근 연동 날짜 갱신
-      AutoSyncConfig config = configMap.get(indexInfo.getId());
-      if (config != null) {
-        config.updateLastSyncAt(LocalDate.now());
+        // 연동 후 자동 연동 설정에 최근 연동 날짜 갱신
+        AutoSyncConfig config = configMap.get(indexInfo.getId());
+        if (config != null) {
+          config.updateLastSyncAt(LocalDate.now());
+        }
+      } catch (Exception e) {
+        log.error("[지수 데이터 연동 실패] indexName = {}, date = {}, error = {}", item.indexName(), item.dataBaseDate(), e.getMessage());
+        logList.add(IntegrationLog.createFailed(JobType.INDEX_DATA, indexInfo, LocalDate.now(), worker));
       }
     }
       indexDataRepository.saveAll(newIndexDataList);
